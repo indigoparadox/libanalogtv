@@ -13,7 +13,14 @@
 #define _XSCREENSAVER_ANALOGTV_H
 
 #include "thread_util.h"
+#ifdef HAVE_XSHM_EXTENSION
 #include "xshm.h"
+#endif
+
+#ifdef WIN32
+#include <Windows.h>
+#endif
+#include "xssemu.h"
 
 /*
   You'll need these to generate standard NTSC TV signals
@@ -87,7 +94,11 @@ typedef struct analogtv_input_s {
 } analogtv_input;
 
 typedef struct analogtv_font_s {
+#ifdef WIN32
+	HBITMAP text_im;
+#else
   XImage *text_im;
+#endif
   int char_w, char_h;
   int x_mult, y_mult;
 } analogtv_font;
@@ -118,10 +129,15 @@ struct analogtv_yiq_s {
 
 typedef struct analogtv_s {
 
+#ifdef WIN32
+  HDC dpy;
+  HWND window;
+#else
   Display *dpy;
   Window window;
   Screen *screen;
   XWindowAttributes xgwa;
+#endif
 
   struct threadpool threads;
 
@@ -160,6 +176,7 @@ typedef struct analogtv_s {
   int use_shm,use_cmap,use_color;
   int bilevel_signal;
 
+#ifndef WIN32
 #ifdef HAVE_XSHM_EXTENSION
   XShmSegmentInfo shm_info;
 #endif
@@ -170,9 +187,14 @@ typedef struct analogtv_s {
   unsigned int red_mask, green_mask, blue_mask;
 
   Colormap colormap;
+#endif
   int usewidth,useheight,xrepl,subwidth;
+#ifndef WIN32
   XImage *image; /* usewidth * useheight */
   GC gc;
+#else
+  HBITMAP image;
+#endif
   int screen_xo,screen_yo; /* centers image in window */
 
   int flutter_horiz_desync;
@@ -236,7 +258,11 @@ typedef struct analogtv_s {
 } analogtv;
 
 
+#ifdef WIN32
+analogtv *analogtv_allocate(HDC dpy, HWND window);
+#else
 analogtv *analogtv_allocate(Display *dpy, Window window);
+#endif
 analogtv_input *analogtv_input_allocate(void);
 
 /* call if window size changes */
@@ -250,7 +276,11 @@ void analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi);
 void analogtv_draw(analogtv *it, double noiselevel,
                    const analogtv_reception *const *recs, unsigned rec_count);
 
+#ifdef WIN32
+int analogtv_load_ximage(analogtv *it, analogtv_input *input, HBITMAP pic_im);
+#else
 int analogtv_load_ximage(analogtv *it, analogtv_input *input, XImage *pic_im);
+#endif
 
 void analogtv_reception_update(analogtv_reception *inp);
 
@@ -259,7 +289,11 @@ void analogtv_setup_teletext(analogtv_input *input);
 
 /* Functions for rendering content into an analogtv_input */
 
+#ifdef WIN32
+void analogtv_make_font(HDC dpy, HWND window,
+#else
 void analogtv_make_font(Display *dpy, Window window,
+#endif
                         analogtv_font *f, int w, int h, char *fontname);
 int analogtv_font_pixel(analogtv_font *f, int c, int x, int y);
 void analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value);

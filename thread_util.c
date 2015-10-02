@@ -16,7 +16,7 @@ implied warranty.
 #include "thread_util.h"
 
 #include "aligned_malloc.h"
-#include "resources.h"
+/* #include "resources.h" */
 
 #if HAVE_CONFIG_H
 #	include "config.h"
@@ -289,7 +289,11 @@ static int _cache_line_size = sizeof(void *);
 
 #endif /* HAVE_PTHREAD */
 
+#ifdef WIN32
+static void _thread_util_init(HDC dpy)
+#else
 static void _thread_util_init(Display *dpy)
+#endif
 {
 #if HAVE_PTHREAD
 /*	This is maybe not thread-safe, but: this should -- and generally will --
@@ -474,7 +478,11 @@ static unsigned _hardware_concurrency(void)
 #	endif
 #endif
 
+#ifdef WIN32
+unsigned hardware_concurrency(HDC dpy)
+#else
 unsigned hardware_concurrency(Display *dpy)
+#endif
 {
 	_thread_util_init(dpy);
 #if HAVE_PTHREAD
@@ -486,7 +494,11 @@ unsigned hardware_concurrency(Display *dpy)
 
 /* thread_memory_alignment() */
 
+#ifdef WIN32
+unsigned thread_memory_alignment(HDC dpy)
+#else
 unsigned thread_memory_alignment(Display *dpy)
+#endif
 {
 	_thread_util_init(dpy);
 #if HAVE_PTHREAD
@@ -712,7 +724,11 @@ static void _unlock_and_destroy(struct threadpool *self)
 
 #endif /* HAVE_PTHREAD */
 
+#ifdef WIN32
+int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, HDC dpy, unsigned count)
+#else
 int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, Display *dpy, unsigned count)
+#endif
 {
 	_thread_util_init(dpy);
 
