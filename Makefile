@@ -1,8 +1,12 @@
 
+LIBS := -lm
+
+CFLAGS := -DGETTIMEOFDAY_TWO_ARGS
+
 all: libanalogtv.so
 
-libanalogtv.so: analogtv.o
-	$(CC) $(CFLAGS) -o $@.out $^
+libanalogtv.so: analogtv.o aligned_malloc.o thread_util.o yarandom.o
+	$(CC) $(LIBS) -o $@.out $^
 
 # = Generic Utility Definitions =
 

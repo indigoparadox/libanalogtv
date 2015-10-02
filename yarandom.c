@@ -58,7 +58,11 @@
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>  /* for getpid() */
 #endif
+#ifdef WIN32
+#include <Windows.h>
+#else
 #include <sys/time.h> /* for gettimeofday() */
+#endif
 
 #include "yarandom.h"
 # undef ya_rand_init

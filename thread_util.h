@@ -83,13 +83,21 @@ implied warranty.
 #	include <unistd.h>
 #endif
 
-#ifdef HAVE_COCOA
+#ifdef WIN32
+#	include <windows.h>
+#elif defined HAVE_COCOA
 #	include "jwxyz.h"
 #else
 #	include <X11/Xlib.h>
 #endif
 
+#include "xssemu.h"
+
+#ifdef WIN32
+unsigned hardware_concurrency(HDC dpy);
+#else
 unsigned hardware_concurrency(Display *dpy);
+#endif
 /* This is supposed to return the number of available CPU cores. This number
    isn't necessarily constant: a system administrator can hotplug or
    enable/disable CPUs on certain systems, or the system can deactivate a
@@ -100,7 +108,11 @@ unsigned hardware_concurrency(Display *dpy);
    This function isn't fast; the result should be cached.
 */
 
+#ifdef WIN32
+unsigned thread_memory_alignment(HDC dpy);
+#else
 unsigned thread_memory_alignment(Display *dpy);
+#endif
 
 /* Returns the proper alignment for memory allocated by a thread that is
    shared with other threads.
@@ -289,7 +301,11 @@ struct threadpool_class
 
 /* Returns 0 on success, on failure can return ENOMEM, or any error code from
    threadpool_class.create. */
+#ifdef WIN32
+int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, HDC dpy, unsigned count);
+#else
 int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, Display *dpy, unsigned count);
+#endif
 void threadpool_destroy(struct threadpool *self);
 
 void threadpool_run(struct threadpool *self, void (*func)(void *));
