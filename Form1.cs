@@ -14,7 +14,7 @@ namespace AnalogTVTest {
 
         private Graphics g;
         private IntPtr tv;
-        private IntPtr input;
+        private AnalogTV.analogtv_reception rec;
         private int[][] pixels;
         private int[] ntsc;
 
@@ -31,17 +31,25 @@ namespace AnalogTVTest {
 
             this.g = Graphics.FromHwnd( this.Handle );
             this.tv = AnalogTV.analogtv_allocate( this.g.GetHdc(), this.Handle );
-            this.input = AnalogTV.analogtv_input_allocate();
-            AnalogTV.analogtv_setup_sync( this.input, 1, 0 );
+            this.rec.input = AnalogTV.analogtv_input_allocate();
+            AnalogTV.analogtv_setup_sync( this.rec.input, 1, 0 );
 
             AnalogTV.analogtv_lcp_to_ntsc( AnalogTV.ANALOGTV_BLACK_LEVEL, 0.0, 0.0, this.ntsc );
-            AnalogTV.analogtv_draw_solid( this.input, AnalogTV.ANALOGTV_VIS_START, AnalogTV.ANALOGTV_VIS_END, AnalogTV.ANALOGTV_TOP, AnalogTV.ANALOGTV_BOT, this.ntsc );
+            AnalogTV.analogtv_draw_solid( this.rec.input, AnalogTV.ANALOGTV_VIS_START, AnalogTV.ANALOGTV_VIS_END, AnalogTV.ANALOGTV_TOP, AnalogTV.ANALOGTV_BOT, this.ntsc );
 
-
+            Timer TPaint = new Timer();
+            TPaint.Interval = 100;
+            TPaint.Tick += this.TPaint_Tick;
+            TPaint.Enabled = true;
+            TPaint.Start();
         }
 
-        private void Form1_Paint( object sender, PaintEventArgs e ) {
-            AnalogTV.analogtv_draw( this.tv, 7.0, IntPtr.Zero, 0 );
+        private void TPaint_Tick( Object sender, EventArgs e ) {
+            AnalogTV.analogtv_reception_update( this.rec );
+
+            g.FillRectangle( Brushes.Blue, 0, 0, 100, 100 );
+
+            AnalogTV.analogtv_draw( this.tv, 7.0, this.rec, 1 );
         }
     }
 }

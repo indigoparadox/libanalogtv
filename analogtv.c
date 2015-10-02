@@ -1463,6 +1463,24 @@ analogtv_blast_imagerow(const analogtv *it,
 
 #ifdef WIN32
   // XXX
+  for (y = ytop; y < ybot; y++) {
+	  unsigned line = y - ytop;
+	  float levelmult = it->leveltable[lineheight][line].value;
+	  for (x = 0, rpf = rgbf; rpf != rgbf_end; x++, rpf += 3) {
+		  int ntscri = rpf[0] * levelmult;
+		  int ntscgi = rpf[1] * levelmult;
+		  int ntscbi = rpf[2] * levelmult;
+		  if (ntscri >= ANALOGTV_CV_MAX) ntscri = ANALOGTV_CV_MAX - 1;
+		  if (ntscgi >= ANALOGTV_CV_MAX) ntscgi = ANALOGTV_CV_MAX - 1;
+		  if (ntscbi >= ANALOGTV_CV_MAX) ntscbi = ANALOGTV_CV_MAX - 1;
+		  for (j = 0; j < xrepl; j++) {
+			  HDC hdcMem = CreateCompatibleDC(it->image);
+			  HBITMAP oldBitmap = SelectObject(hdcMem, it->image);
+			  SetPixel(hdcMem, x*xrepl + j, y, it->red_values[ntscri] | it->green_values[ntscgi] | it->blue_values[ntscbi]);
+			  DeleteDC(hdcMem);
+		  }
+	  }
+  }
 #else
   for (y=ytop; y<ybot; y++) {
     char *rowdata=it->image->data + y*it->image->bytes_per_line;

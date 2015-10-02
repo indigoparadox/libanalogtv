@@ -37,6 +37,10 @@ namespace libAnalogTV.Interop {
         public const int ANALOGTV_VIS_END = ANALOGTV_PIC_START + (ANALOGTV_PIC_LEN * 7 / 8);
         public const int ANALOGTV_VIS_LEN = ANALOGTV_VIS_END - ANALOGTV_VIS_START;
 
+        public const int ANALOGTV_HASHNOISE_LEN = 6;
+
+        public const int ANALOGTV_GHOSTFIR_LEN = 4;
+
         /* analogtv.signal is in IRE units, as defined below: */
         public const int ANALOGTV_WHITE_LEVEL = 100;
         public const int ANALOGTV_GRAY50_LEVEL = 55;
@@ -45,6 +49,25 @@ namespace libAnalogTV.Interop {
         public const int ANALOGTV_BLANK_LEVEL = 0;
         public const int ANALOGTV_SYNC_LEVEL = -40;
         public const int ANALOGTV_CB_LEVEL = 20;
+
+        public const int ANALOGTV_SIGNAL_LEN = ANALOGTV_V * ANALOGTV_H;
+
+        public struct analogtv_reception {
+
+            public IntPtr input;
+            double ofs;
+            double level;
+            double multipath;
+            double freqerr;
+
+            [MarshalAsAttribute( UnmanagedType.ByValArray, SizeConst = ANALOGTV_GHOSTFIR_LEN )]
+            double[] ghostfir;
+            [MarshalAsAttribute( UnmanagedType.ByValArray, SizeConst = ANALOGTV_GHOSTFIR_LEN )]
+            double[] ghostfir2;
+
+            double hfloss;
+            double hfloss2;
+        }
 
         public struct level {
             int index;
@@ -177,13 +200,13 @@ namespace libAnalogTV.Interop {
         public static extern IntPtr analogtv_input_allocate();
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_draw( IntPtr it, double noiselevel, IntPtr recs, uint rec_count );
+        public static extern void analogtv_draw( IntPtr it, double noiselevel, analogtv_reception recs, uint rec_count );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern int analogtv_load_ximage( IntPtr it, IntPtr input, IntPtr pic_im );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_reception_update( IntPtr inp );
+        public static extern void analogtv_reception_update( analogtv_reception inp );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern void analogtv_setup_teletext( IntPtr input );
