@@ -259,68 +259,67 @@ typedef struct analogtv_s {
 
 
 #ifdef WIN32
-analogtv *analogtv_allocate(HDC dpy, HWND window);
+PROTO_DLL analogtv *analogtv_allocate(HDC dpy, HWND window);
 #else
 analogtv *analogtv_allocate(Display *dpy, Window window);
 #endif
-analogtv_input *analogtv_input_allocate(void);
+PROTO_DLL analogtv_input *analogtv_input_allocate(void);
 
 /* call if window size changes */
-void analogtv_reconfigure(analogtv *it);
+PROTO_DLL void analogtv_reconfigure(analogtv *it);
 
-void analogtv_set_defaults(analogtv *it, char *prefix);
-void analogtv_release(analogtv *it);
-int analogtv_set_demod(analogtv *it);
-void analogtv_setup_frame(analogtv *it);
-void analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi);
-void analogtv_draw(analogtv *it, double noiselevel,
-                   const analogtv_reception *const *recs, unsigned rec_count);
+PROTO_DLL void analogtv_set_defaults(analogtv *it, char *prefix);
+PROTO_DLL void analogtv_release(analogtv *it);
+PROTO_DLL int analogtv_set_demod(analogtv *it);
+PROTO_DLL void analogtv_setup_frame(analogtv *it);
+PROTO_DLL void analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi);
+PROTO_DLL void analogtv_draw(analogtv *it, double noiselevel, const analogtv_reception *const *recs, unsigned rec_count);
 
 #ifdef WIN32
-int analogtv_load_ximage(analogtv *it, analogtv_input *input, HBITMAP pic_im);
+PROTO_DLL int analogtv_load_ximage(analogtv *it, analogtv_input *input, HBITMAP pic_im);
 #else
 int analogtv_load_ximage(analogtv *it, analogtv_input *input, XImage *pic_im);
 #endif
 
-void analogtv_reception_update(analogtv_reception *inp);
+PROTO_DLL void analogtv_reception_update(analogtv_reception *inp);
 
-void analogtv_setup_teletext(analogtv_input *input);
+PROTO_DLL void analogtv_setup_teletext(analogtv_input *input);
 
 
 /* Functions for rendering content into an analogtv_input */
 
 #ifdef WIN32
-void analogtv_make_font(HDC dpy, HWND window,
+PROTO_DLL void analogtv_make_font(HDC dpy, HWND window,
 #else
 void analogtv_make_font(Display *dpy, Window window,
 #endif
                         analogtv_font *f, int w, int h, char *fontname);
-int analogtv_font_pixel(analogtv_font *f, int c, int x, int y);
-void analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value);
-void analogtv_font_set_char(analogtv_font *f, int c, char *s);
-void analogtv_lcp_to_ntsc(double luma, double chroma, double phase,
+PROTO_DLL int analogtv_font_pixel(analogtv_font *f, int c, int x, int y);
+PROTO_DLL void analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value);
+PROTO_DLL void analogtv_font_set_char(analogtv_font *f, int c, char *s);
+PROTO_DLL void analogtv_lcp_to_ntsc(double luma, double chroma, double phase,
                           int ntsc[4]);
 
 
-void analogtv_draw_solid(analogtv_input *input,
+PROTO_DLL void analogtv_draw_solid(analogtv_input *input,
                          int left, int right, int top, int bot,
                          int ntsc[4]);
 
-void analogtv_draw_solid_rel_lcp(analogtv_input *input,
+PROTO_DLL void analogtv_draw_solid_rel_lcp(analogtv_input *input,
                                  double left, double right,
                                  double top, double bot,
                                  double luma, double chroma, double phase);
 
-void analogtv_draw_char(analogtv_input *input, analogtv_font *f,
+PROTO_DLL void analogtv_draw_char(analogtv_input *input, analogtv_font *f,
                         int c, int x, int y, int ntsc[4]);
-void analogtv_draw_string(analogtv_input *input, analogtv_font *f,
+PROTO_DLL void analogtv_draw_string(analogtv_input *input, analogtv_font *f,
                           char *s, int x, int y, int ntsc[4]);
-void analogtv_draw_string_centered(analogtv_input *input, analogtv_font *f,
+PROTO_DLL void analogtv_draw_string_centered(analogtv_input *input, analogtv_font *f,
                                    char *s, int x, int y, int ntsc[4]);
-void analogtv_draw_xpm(analogtv *tv, analogtv_input *input,
+PROTO_DLL void analogtv_draw_xpm(analogtv *tv, analogtv_input *input,
                        const char * const *xpm, int left, int top);
 
-int analogtv_handle_events (analogtv *it);
+PROTO_DLL int analogtv_handle_events (analogtv *it);
 
 #ifdef HAVE_XSHM_EXTENSION
 #define ANALOGTV_DEFAULTS_SHM "*useSHM:           True",

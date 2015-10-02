@@ -507,11 +507,10 @@ static void analogtv_thread_destroy(void *thread_raw)
 {
 }
 
-analogtv *
 #ifdef WIN32
-analogtv_allocate(HDC dpy, HWND window)
+PROTO_DLL analogtv *analogtv_allocate(HDC dpy, HWND window)
 #else
-analogtv_allocate(Display *dpy, Window window)
+analogtv *analogtv_allocate(Display *dpy, Window window)
 #endif
 {
   static const struct threadpool_class cls = {
@@ -704,7 +703,7 @@ analogtv_release(analogtv *it)
 
   If we're using a colormap, set it up.
 */
-int
+PROTO_DLL int
 analogtv_set_demod(analogtv *it)
 {
 #ifndef WIN32
@@ -1053,7 +1052,7 @@ analogtv_setup_frame(analogtv *it)
 #endif
 }
 
-void
+PROTO_DLL void
 analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi)
 {
   int i,lineno,vsync;
@@ -1832,7 +1831,7 @@ static void analogtv_thread_draw_lines(void *thread_raw)
   free(raw_rgb_start);
 }
 
-void
+PROTO_DLL void
 analogtv_draw(analogtv *it, double noiselevel,
               const analogtv_reception *const *recs, unsigned rec_count)
 {
@@ -2105,7 +2104,7 @@ analogtv_draw(analogtv *it, double noiselevel,
 #endif
 }
 
-analogtv_input *
+PROTO_DLL analogtv_input *
 analogtv_input_allocate()
 {
   analogtv_input *ret=(analogtv_input *)calloc(1,sizeof(analogtv_input));
@@ -2119,7 +2118,7 @@ analogtv_input_allocate()
   This isn't especially tuned for speed.
 */
 
-int
+PROTO_DLL int
 #ifdef WIN32
 analogtv_load_ximage(analogtv *it, analogtv_input *input, HBITMAP pic_im)
 #else
@@ -2284,7 +2283,7 @@ void analogtv_channel_noise(analogtv_input *it, analogtv_input *s2)
 #endif
 
 
-void
+PROTO_DLL void
 analogtv_reception_update(analogtv_reception *rec)
 {
   int i;
@@ -2398,7 +2397,7 @@ analogtv_make_font(Display *dpy, Window window, analogtv_font *f,
 #endif
 }
 
-int
+PROTO_DLL int
 analogtv_font_pixel(analogtv_font *f, int c, int x, int y)
 {
   if (x<0 || x>=f->char_w) return 0;
@@ -2412,7 +2411,7 @@ analogtv_font_pixel(analogtv_font *f, int c, int x, int y)
 #endif
 }
 
-void
+PROTO_DLL void
 analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value)
 {
   if (x<0 || x>=f->char_w) return;
@@ -2443,7 +2442,7 @@ analogtv_font_set_char(analogtv_font *f, int c, char *s)
   }
 }
 
-void
+PROTO_DLL void
 analogtv_lcp_to_ntsc(double luma, double chroma, double phase, int ntsc[4])
 {
   int i;
@@ -2456,7 +2455,7 @@ analogtv_lcp_to_ntsc(double luma, double chroma, double phase, int ntsc[4])
   }
 }
 
-void
+PROTO_DLL void
 analogtv_draw_solid(analogtv_input *input,
                     int left, int right, int top, int bot,
                     int ntsc[4])
@@ -2474,7 +2473,7 @@ analogtv_draw_solid(analogtv_input *input,
 }
 
 
-void
+PROTO_DLL void
 analogtv_draw_solid_rel_lcp(analogtv_input *input,
                             double left, double right, double top, double bot,
                             double luma, double chroma, double phase)
@@ -2491,7 +2490,7 @@ analogtv_draw_solid_rel_lcp(analogtv_input *input,
 }
 
 
-void
+PROTO_DLL void
 analogtv_draw_char(analogtv_input *input, analogtv_font *f,
                    int c, int x, int y, int ntsc[4])
 {
@@ -2515,7 +2514,7 @@ analogtv_draw_char(analogtv_input *input, analogtv_font *f,
   }
 }
 
-void
+PROTO_DLL void
 analogtv_draw_string(analogtv_input *input, analogtv_font *f,
                      char *s, int x, int y, int ntsc[4])
 {
@@ -2526,7 +2525,7 @@ analogtv_draw_string(analogtv_input *input, analogtv_font *f,
   }
 }
 
-void
+PROTO_DLL void
 analogtv_draw_string_centered(analogtv_input *input, analogtv_font *f,
                               char *s, int x, int y, int ntsc[4])
 {
@@ -2549,7 +2548,7 @@ static const char hextonib[128] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 /*
   Much of this function was adapted from logo.c
  */
-void
+PROTO_DLL void
 analogtv_draw_xpm(analogtv *tv, analogtv_input *input,
                   const char * const *xpm, int left, int top)
 {
