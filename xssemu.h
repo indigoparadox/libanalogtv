@@ -19,7 +19,9 @@ typedef struct {
 	char pad;
 } XColor;
 #else
+
 #define PROTO_DLL
+
 #endif
 
 #endif /* XSSEMU_H */

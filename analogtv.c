@@ -64,6 +64,8 @@
    - removed unusable hashnoise code
  */
 
+char* progname = "analogtv";
+
 #ifdef WIN32
 # include <windows.h>
 #elif defined HAVE_COCOA
@@ -264,7 +266,7 @@ analogtv_set_defaults(analogtv *it, char *prefix)
 }
 
 #ifndef WIN32
-extern Bool mono_p; /* shoot me */
+//extern Bool mono_p; /* shoot me */
 #endif
 
 static void
@@ -573,16 +575,22 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
   it->visbits = it->xgwa.visual->bits_per_rgb;
   it->visdepth = it->xgwa.depth;
   if (it->visclass == TrueColor || it->visclass == DirectColor) {
+#if 0
     if (get_integer_resource (it->dpy, "use_cmap", "Integer")) {
       it->use_cmap=1;
     } else {
+#endif
       it->use_cmap=0;
+#if 0
     }
     it->use_color=!mono_p;
+#endif
+    it->use_color=1;
   }
   else if (it->visclass == PseudoColor || it->visclass == StaticColor) {
     it->use_cmap=1;
-    it->use_color=!mono_p;
+    //it->use_color=!mono_p;
+    it->use_color=1;
   }
   else {
     it->use_cmap=1;
@@ -625,8 +633,17 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
 #endif
 
 #ifndef WIN32
+/*
   gcv.background=get_pixel_resource(it->dpy, it->colormap,
                                     "background", "Background");
+*/
+
+
+  XColor color;
+  color.flags = DoRed|DoGreen|DoBlue;
+  color.red = color.green = color.blue = 0; /* Black */
+  XAllocColor(it->dpy, it->colormap, &color);
+  gcv.background = (unsigned int)color.pixel;
 
   it->gc = XCreateGC(it->dpy, it->window, GCBackground, &gcv);
   XSetWindowBackground(it->dpy, it->window, gcv.background);
@@ -2336,9 +2353,7 @@ analogtv_reception_update(analogtv_reception *rec)
 /* jwz: since MacOS doesn't have "6x10", I dumped this font to an XBM...
  */
 
-#ifdef XBMTEXT
 #include "images/6x10font.xbm"
-#endif
 
 void
 #ifdef WIN32

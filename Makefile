@@ -1,12 +1,15 @@
 
-LIBS := -lm
+LIBS := -lm -lX11
 
-CFLAGS := -DGETTIMEOFDAY_TWO_ARGS
+CFLAGS := -DGETTIMEOFDAY_TWO_ARGS -fPIC
 
-all: libanalogtv.so
+all: libanalogtv.so analogtest
 
-libanalogtv.so: analogtv.o aligned_malloc.o thread_util.o yarandom.o
-	$(CC) $(LIBS) -o $@.out $^
+analogtest: analogtest.o
+	$(CC) $(LIBS) -L. -lanalogtv -o $@ $^
+
+libanalogtv.so: analogtv.o aligned_malloc.o thread_util.o yarandom.o visual.o
+	$(CC) $(LIBS) -shared -o $@ $^
 
 # = Generic Utility Definitions =
 
@@ -15,5 +18,5 @@ libanalogtv.so: analogtv.o aligned_malloc.o thread_util.o yarandom.o
 
 clean:
 	rm *.o
-	rm *.out
+	rm *.so
 
