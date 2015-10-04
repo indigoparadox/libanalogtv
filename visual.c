@@ -15,7 +15,7 @@
  */
 
 #include "utils.h"
-#include "resources.h"  /* for get_string_resource() */
+//#include "resources.h"  /* for get_string_resource() */
 #include "visual.h"
 
 #include <string.h>
@@ -155,6 +155,7 @@ get_visual (Screen *screen, const char *string, Bool prefer_writable_cells,
   return result;
 }
 
+/*
 Visual *
 get_visual_resource (Screen *screen, char *name, char *class,
 		     Bool prefer_writable_cells)
@@ -168,6 +169,7 @@ get_visual_resource (Screen *screen, char *name, char *class,
   else
     return DefaultVisualOfScreen (screen);
 }
+*/
 
 
 static Visual *
