@@ -3,6 +3,10 @@
 #include <X11/Xlib.h>
 #include "analogtv.h"
 
+#ifdef WIN32
+
+#else
+
 int main( void ) {
    Display* dpy;
    Window rootwin;
@@ -79,4 +83,6 @@ int main( void ) {
 
    return 0;   
 }
+
+#endif
 

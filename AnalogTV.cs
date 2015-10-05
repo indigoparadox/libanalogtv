@@ -52,30 +52,170 @@ namespace libAnalogTV.Interop {
 
         public const int ANALOGTV_SIGNAL_LEN = ANALOGTV_V * ANALOGTV_H;
 
+        [StructLayout( LayoutKind.Sequential )]
         public struct analogtv_reception {
 
             public IntPtr input;
-            double ofs;
-            double level;
-            double multipath;
-            double freqerr;
+            public double ofs;
+            public double level;
+            public double multipath;
+            public double freqerr;
 
             [MarshalAsAttribute( UnmanagedType.ByValArray, SizeConst = ANALOGTV_GHOSTFIR_LEN )]
-            double[] ghostfir;
+            public double[] ghostfir;
             [MarshalAsAttribute( UnmanagedType.ByValArray, SizeConst = ANALOGTV_GHOSTFIR_LEN )]
-            double[] ghostfir2;
+            public double[] ghostfir2;
 
-            double hfloss;
-            double hfloss2;
+            public double hfloss;
+            public double hfloss2;
         }
 
+        [StructLayout( LayoutKind.Sequential )]
         public struct level {
             int index;
             double value;
         }
 
-        public unsafe struct analogtv {
-            IntPtr dpy;
+        public delegate void ThreadRunDelegate( IntPtr self );
+        public delegate void ThreadDestroyDelegate( IntPtr self );
+
+        [StructLayout( LayoutKind.Sequential )]
+        public struct timeval {
+            public int tv_sec;
+            public int tv_usec;
+        }
+
+        [StructLayout( LayoutKind.Sequential )]
+        struct threadpool {
+            uint count;
+
+            /* Copied from threadpool_class. No need for thread_create here, though. */
+            UIntPtr thread_size;
+            ThreadRunDelegate thread_run;
+            ThreadDestroyDelegate thread_destroy;
+
+            IntPtr serial_threads;
+        };
+
+        [StructLayout( LayoutKind.Sequential )]
+        public struct analogtv {
+
+            IntPtr window;
+
+            threadpool threads;
+
+            int n_colors;
+
+            int interlace;
+            int interlace_counter;
+
+            float agclevel;
+
+            /* If you change these, call analogtv_set_demod */
+            Single tint_control, color_control, brightness_control, contrast_control;
+            Single height_control, width_control, squish_control;
+            Single horiz_desync;
+            Single squeezebottom;
+            Single powerup;
+
+            /* internal cache */
+            int blur_mult;
+
+            /* For fast display, set fakeit_top, fakeit_bot to
+               the scanlines (0..ANALOGTV_V) that can be preserved on screen.
+               fakeit_scroll is the number of scan lines to scroll it up,
+               or 0 to not scroll at all. It will DTRT if asked to scroll from
+               an offscreen region.
+            */
+            int fakeit_top;
+            int fakeit_bot;
+            int fakeit_scroll;
+            int redraw_all;
+
+            int use_shm, use_cmap, use_color;
+            int bilevel_signal;
+
+            int usewidth, useheight, xrepl, subwidth;
+
+            IntPtr image;
+
+            int screen_xo, screen_yo; /* centers image in window */
+
+            int flutter_horiz_desync;
+            int flutter_tint;
+
+            timeval last_display_time;
+            int need_clear;
+
+
+            /* Add hash (in the radio sense, not the programming sense.) These
+               are the small white streaks that appear in quasi-regular patterns
+               all over the screen when someone is running the vacuum cleaner or
+               the blender. We also set shrinkpulse for one period which
+               squishes the image horizontally to simulate the temporary line
+               voltate drop when someone turns on a big motor */
+            double hashnoise_rpm;
+            int hashnoise_counter;
+            [MarshalAs( UnmanagedType.ByValArray, SizeConst = ANALOGTV_V )]
+            int[] hashnoise_times;
+            [MarshalAs( UnmanagedType.ByValArray, SizeConst = ANALOGTV_V )]
+            int[] hashnoise_signal;
+            int hashnoise_on;
+            int hashnoise_enable;
+            int shrinkpulse;
+
+            [MarshalAs( UnmanagedType.ByValArray, SizeConst = ANALOGTV_V )]
+            Single[] crtload;
+
+            [MarshalAs( UnmanagedType.ByValArray, SizeConst = ANALOGTV_CV_MAX )]
+            uint[] red_values;
+            [MarshalAs( UnmanagedType.ByValArray, SizeConst = ANALOGTV_CV_MAX )]
+            uint[] green_values;
+            [MarshalAs( UnmanagedType.ByValArray, SizeConst = ANALOGTV_CV_MAX )]
+            uint[] blue_values;
+
+            [MarshalAs( UnmanagedType.ByValArray, SizeConst = 256 )]
+            UInt32[] colors;
+            int cmap_y_levels;
+            int cmap_i_levels;
+            int cmap_q_levels;
+
+            Single tint_i, tint_q;
+
+            int cur_hsync;
+            [MarshalAs( UnmanagedType.ByValArray, SizeConst = ANALOGTV_V )]
+            int[] line_hsync;
+            int cur_vsync;
+            [MarshalAs( UnmanagedType.ByValArray, SizeConst = 4 )]
+            double[] cb_phase;
+            [MarshalAs( UnmanagedType.ByValArray, SizeConst = ANALOGTV_V * 4 )]
+            double[] line_cb_phase;
+
+            int channel_change_cycles;
+            double rx_signal_level;
+            IntPtr rx_signal;
+
+
+            [MarshalAs( UnmanagedType.ByValArray, SizeConst = (ANALOGTV_MAX_LINEHEIGHT + 1) * (ANALOGTV_MAX_LINEHEIGHT + 1) )]
+            level[] leveltable;
+
+            /* Only valid during draw. */
+            uint random0, random1;
+            double noiselevel;
+            //const analogtv_reception*const * recs;
+            IntPtr recs;
+            uint rec_count;
+
+            IntPtr signal_subtotals;
+
+            float puheight;
+
+            int test_five;
+        }
+
+#if false
+        [StructLayout( LayoutKind.Sequential )]
+        public struct analogtv {
             IntPtr window;
 
             IntPtr threads;
@@ -174,12 +314,13 @@ namespace libAnalogTV.Interop {
 
             float puheight;
         }
+#endif
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern void analogtv_reconfigure( IntPtr it );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_set_defaults( IntPtr it, char[] prefix );
+        public static extern void analogtv_set_defaults( IntPtr it, StringBuilder prefix );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern void analogtv_release( IntPtr it );
@@ -194,34 +335,34 @@ namespace libAnalogTV.Interop {
         public static extern void analogtv_setup_sync( IntPtr input, int do_cb, int do_ssavi );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern IntPtr analogtv_allocate( IntPtr dpy, IntPtr window );
+        public static extern IntPtr analogtv_allocate( IntPtr window );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern IntPtr analogtv_input_allocate();
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_draw( IntPtr it, double noiselevel, analogtv_reception recs, uint rec_count );
+        public static extern void analogtv_draw( IntPtr it, double noiselevel, IntPtr recs, uint rec_count );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern int analogtv_load_ximage( IntPtr it, IntPtr input, IntPtr pic_im );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_reception_update( analogtv_reception inp );
+        public static extern void analogtv_reception_update( IntPtr inp );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern void analogtv_setup_teletext( IntPtr input );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_make_font( IntPtr dpy, IntPtr window, IntPtr f, int w, int h, char[] fontname );
+        public static extern void analogtv_make_font( IntPtr window, IntPtr f, int w, int h, char[] fontname );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern int analogtv_font_pixel( IntPtr f, int c, int x, int y );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_font_set_pixel( IntPtr f, int c, int x, int y, int value );
+        public static extern void analogtv_font_set_pixel( IntPtr f, int c, int x, int y, int value, IntPtr it );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_font_set_char( IntPtr f, int c, char[] s );
+        public static extern void analogtv_font_set_char( IntPtr f, int c, char[] s, IntPtr it );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern void analogtv_lcp_to_ntsc( double luma, double chroma, double phase, int[] ntsc ); // ntsc[4]

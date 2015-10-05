@@ -299,11 +299,12 @@ analogtv_alloc_image(analogtv *it)
   /* On failure, it->image is NULL. */
 
 #ifdef WIN32
-  unsigned bits_per_pixel = GetDeviceCaps(it->dpy, BITSPIXEL) * GetDeviceCaps(it->dpy, PLANES);
+	HDC dpy = GetDC(it->window);
+	unsigned bits_per_pixel = GetDeviceCaps(dpy, BITSPIXEL) * GetDeviceCaps(dpy, PLANES);
 #else
   unsigned bits_per_pixel = get_bits_per_pixel(it->dpy, it->xgwa.depth);
 #endif
-  unsigned align = thread_memory_alignment(it->dpy) * 8 - 1;
+  unsigned align = thread_memory_alignment(dpy) * 8 - 1;
   /* Width is in bits. */
   unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
 
@@ -320,7 +321,7 @@ analogtv_alloc_image(analogtv *it)
 	RECT windrect;
 	GetWindowRect(it->window, &windrect);
 	it->image = CreateBitmap(windrect.right - windrect.left, windrect.bottom - windrect.top,
-		GetDeviceCaps(it->dpy, PLANES), GetDeviceCaps(it->dpy, BITSPIXEL), NULL);
+		GetDeviceCaps(dpy, PLANES), GetDeviceCaps(dpy, BITSPIXEL), NULL);
 #else
     it->image = XCreateImage(it->dpy, it->xgwa.visual, it->xgwa.depth, ZPixmap, 0, 0,
                              it->usewidth, it->useheight, 8, width / 8);
@@ -343,11 +344,19 @@ analogtv_alloc_image(analogtv *it)
     fprintf(stderr, "analogtv: %s\n", strerror(ENOMEM));
   }
 #endif
+
+#ifdef WIN32
+  ReleaseDC(it->window, dpy);
+#endif
 }
 
 
 static void
+#ifdef WIN32
 analogtv_configure(analogtv *it)
+#else
+analogtv_configure(analogtv *it)
+#endif
 {
   int oldwidth=it->usewidth;
   int oldheight=it->useheight;
@@ -464,9 +473,9 @@ void
 analogtv_reconfigure(analogtv *it)
 {
 #ifndef WIN32
-  XGetWindowAttributes (it->dpy, it->window, &it->xgwa);
+	XGetWindowAttributes(it->dpy, it->window, &it->xgwa);
 #endif
-  analogtv_configure(it);
+	analogtv_configure(it);
 }
 
 /* Can be any power-of-two <= 32. 16 a slightly better choice for 2-3 threads. */
@@ -491,8 +500,13 @@ static int analogtv_thread_create(void *thread_raw, struct threadpool *threads,
   thread->it = GET_PARENT_OBJ(analogtv, threads, threads);
   thread->thread_id = thread_id;
 
-  align = thread_memory_alignment(thread->it->dpy) /
+#ifdef WIN32
+  align = thread_memory_alignment(NULL) /
             sizeof(thread->it->signal_subtotals[0]);
+#else
+  align = thread_memory_alignment(thread->it->dpy) /
+	  sizeof(thread->it->signal_subtotals[0]);
+#endif
   if (!align)
     align = 1;
   align = ~(align * ANALOGTV_SUBTOTAL_LEN - 1);
@@ -510,7 +524,7 @@ static void analogtv_thread_destroy(void *thread_raw)
 }
 
 #ifdef WIN32
-PROTO_DLL analogtv *analogtv_allocate(HDC dpy, HWND window)
+PROTO_DLL analogtv *analogtv_allocate(HWND window)
 #else
 analogtv *analogtv_allocate(Display *dpy, Window window)
 #endif
@@ -523,7 +537,7 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
 #ifndef WIN32
   XGCValues gcv;
 #endif
-  analogtv *it=NULL;
+  analogtv *it = NULL;
   int i;
   const size_t rx_signal_len = ANALOGTV_SIGNAL_LEN + 2*ANALOGTV_H;
 
@@ -534,8 +548,11 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
   it->threads.count=0;
   it->rx_signal=NULL;
   it->signal_subtotals=NULL;
+  it->test_five = 5;
 
+#ifndef WIN32
   it->dpy=dpy;
+#endif
   it->window=window;
 
   if (thread_malloc((void **)&it->rx_signal, dpy,
@@ -548,8 +565,13 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
                      (rx_signal_len / ANALOGTV_SUBTOTAL_LEN)))
     goto fail;
 
+#ifdef WIN32
+  if (threadpool_create(&it->threads, &cls, hardware_concurrency()))
+	  goto fail;
+#else
   if (threadpool_create(&it->threads, &cls, dpy, hardware_concurrency(dpy)))
     goto fail;
+#endif
 
   assert(it->threads.count);
 
@@ -566,6 +588,8 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
 #ifdef WIN32
   it->use_cmap = 0;
   it->use_color = 1;
+
+  analogtv_configure(it);
 #else
   XGetWindowAttributes(it->dpy, it->window, &it->xgwa);
 
@@ -630,14 +654,11 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
       it->blue_values[i]=((intensity>>it->blue_invprec)<<it->blue_shift);
     }
   }
-#endif
 
-#ifndef WIN32
 /*
   gcv.background=get_pixel_resource(it->dpy, it->colormap,
                                     "background", "Background");
 */
-
 
   XColor color;
   color.flags = DoRed|DoGreen|DoBlue;
@@ -648,9 +669,10 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
   it->gc = XCreateGC(it->dpy, it->window, GCBackground, &gcv);
   XSetWindowBackground(it->dpy, it->window, gcv.background);
   XClearWindow(dpy,window);
-#endif
 
   analogtv_configure(it);
+
+#endif
 
   return it;
 
@@ -1479,7 +1501,9 @@ analogtv_blast_imagerow(const analogtv *it,
   for (i=0; i<3; i++) level_copyfrom[i]=NULL;
 
 #ifdef WIN32
-  // XXX
+  // TESTME
+  HDC hdcMem = CreateCompatibleDC(it->image);
+  SelectObject(hdcMem, it->image);
   for (y = ytop; y < ybot; y++) {
 	  unsigned line = y - ytop;
 	  float levelmult = it->leveltable[lineheight][line].value;
@@ -1491,13 +1515,11 @@ analogtv_blast_imagerow(const analogtv *it,
 		  if (ntscgi >= ANALOGTV_CV_MAX) ntscgi = ANALOGTV_CV_MAX - 1;
 		  if (ntscbi >= ANALOGTV_CV_MAX) ntscbi = ANALOGTV_CV_MAX - 1;
 		  for (j = 0; j < xrepl; j++) {
-			  HDC hdcMem = CreateCompatibleDC(it->image);
-			  HBITMAP oldBitmap = SelectObject(hdcMem, it->image);
 			  SetPixel(hdcMem, x*xrepl + j, y, it->red_values[ntscri] | it->green_values[ntscgi] | it->blue_values[ntscbi]);
-			  DeleteDC(hdcMem);
 		  }
 	  }
   }
+  DeleteDC(hdcMem);
 #else
   for (y=ytop; y<ybot; y++) {
     char *rowdata=it->image->data + y*it->image->bytes_per_line;
@@ -1867,8 +1889,13 @@ static void analogtv_thread_draw_lines(void *thread_raw)
 }
 
 PROTO_DLL void
+#ifdef WIN32
 analogtv_draw(analogtv *it, double noiselevel,
               const analogtv_reception *const *recs, unsigned rec_count)
+#else
+analogtv_draw(analogtv *it, double noiselevel,
+	const analogtv_reception *const *recs, unsigned rec_count)
+#endif
 {
   int i,lineno;
   /*  int bigloadchange,drawcount;*/
@@ -1878,6 +1905,10 @@ analogtv_draw(analogtv *it, double noiselevel,
   /* AnalogTV isn't very interesting if there isn't enough RAM. */
   if (!it->image)
     return;
+
+#ifdef WIN32
+  HDC dpy = GetDC(it->window);
+#endif
 
   it->rx_signal_level = noiselevel;
   for (i = 0; i != rec_count; ++i) {
@@ -2079,6 +2110,15 @@ analogtv_draw(analogtv *it, double noiselevel,
 
 #ifdef WIN32
   // XXX
+  HBRUSH hbrBkgnd = GetStockObject(BLACK_BRUSH);
+  RECT rcBmp;
+  if (overall_top>0) {
+	  rcBmp.left = 0;
+	  rcBmp.top = 0;
+	  rcBmp.right = it->usewidth;
+	  rcBmp.bottom = overall_top;
+  }
+  FillRect(dpy, &rcBmp, hbrBkgnd);
 #else
   if (overall_top>0) {
     XClearArea(it->dpy, it->window,
@@ -2104,14 +2144,16 @@ analogtv_draw(analogtv *it, double noiselevel,
     } else {
 #ifdef WIN32
 		BITMAP bitmap;
-		HDC hdcMem = CreateCompatibleDC(it->dpy);
-		HBITMAP oldBitmap = SelectObject(hdcMem, it->image);
+		HDC hdcMem = CreateCompatibleDC(dpy);
+		SelectObject(hdcMem, it->image);
 
 		GetObject(it->image, sizeof(bitmap), &bitmap);
-		BitBlt(it->dpy, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcMem, 0, 0, SRCCOPY);
+		BitBlt(dpy, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcMem, 0, 0, SRCCOPY);
 
-		SelectObject(hdcMem, oldBitmap);
+		//SelectObject(hdcMem, oldBitmap);
 		DeleteDC(hdcMem);
+
+		ReleaseDC(it->window, dpy);
 #else
       XPutImage(it->dpy, it->window, it->gc, it->image,
                 0, overall_top,
@@ -2160,9 +2202,6 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input, HBITMAP pic_im)
 analogtv_load_ximage(analogtv *it, analogtv_input *input, XImage *pic_im)
 #endif
 {
-#ifdef WIN32
-	//XXX
-#else
   int i,x,y;
   int img_w,img_h;
   int fyx[7],fyy[7];
@@ -2174,9 +2213,18 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input, XImage *pic_im)
   int y_overscan=5; /* overscan this much top and bottom */
   int y_scanlength=ANALOGTV_VISLINES+2*y_overscan;
 
+#ifdef WIN32
+  HDC dpy = GetDC(it->window);
+
+  SIZE idimensions;
+  GetBitmapDimensionEx(pic_im, &idimensions);
+  img_w = idimensions.cx;
+  img_h = idimensions.cy;
+#else
   img_w=pic_im->width;
   img_h=pic_im->height;
-  
+#endif
+
   for (i=0; i<ANALOGTV_PIC_LEN+4; i++) {
     double phase=90.0-90.0*i;
     double ampl=1.0;
@@ -2189,11 +2237,24 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input, XImage *pic_im)
 
     for (x=0; x<ANALOGTV_PIC_LEN; x++) {
       int picx=(x*img_w)/ANALOGTV_PIC_LEN;
+#ifdef WIN32
+	  HDC hdcMem = CreateCompatibleDC(dpy);
+	  SelectObject(hdcMem, pic_im);
+	  
+	  col1[x].pixel = GetPixel(hdcMem, picx, picy1);
+	  col2[x].pixel = GetPixel(hdcMem, picx, picy2);
+
+	  DeleteDC(hdcMem);
+	  ReleaseDC(it->window, dpy);
+#else
       col1[x].pixel=XGetPixel(pic_im, picx, picy1);
       col2[x].pixel=XGetPixel(pic_im, picx, picy2);
+#endif
     }
+#ifndef WIN32
     XQueryColors(it->dpy, it->colormap, col1, ANALOGTV_PIC_LEN);
     XQueryColors(it->dpy, it->colormap, col2, ANALOGTV_PIC_LEN);
+#endif
 
     for (i=0; i<7; i++) fyx[i]=fyy[i]=0;
     for (i=0; i<4; i++) fix[i]=fiy[i]=fqx[i]=fqy[i]=0.0;
@@ -2258,7 +2319,6 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input, XImage *pic_im)
   }
 
   return 1;
-#endif
 }
 
 #if 0
@@ -2357,7 +2417,7 @@ analogtv_reception_update(analogtv_reception *rec)
 
 void
 #ifdef WIN32
-analogtv_make_font(HDC dpy, HWND window, analogtv_font *f,
+analogtv_make_font(HWND window, analogtv_font *f,
 #else
 analogtv_make_font(Display *dpy, Window window, analogtv_font *f,
 #endif
@@ -2445,21 +2505,36 @@ analogtv_font_pixel(analogtv_font *f, int c, int x, int y)
 }
 
 PROTO_DLL void
+#ifdef WIN32
+analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value, analogtv* it)
+#else
 analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value)
+#endif
 {
   if (x<0 || x>=f->char_w) return;
   if (y<0 || y>=f->char_h) return;
   if (c<0 || c>=256) return;
 
 #ifdef WIN32
-  SetPixel(f->text_im, c*f->char_w + x, y, value);
+  HDC dpy = GetDC(it->window);
+  HDC hdcMem = CreateCompatibleDC(dpy);
+  SelectObject(hdcMem, f->text_im);
+
+  SetPixel(hdcMem, c*f->char_w + x, y, value);
+
+  DeleteDC(hdcMem);
+  ReleaseDC(it->window, dpy);
 #else
   XPutPixel(f->text_im, c*f->char_w + x, y, value);
 #endif
 }
 
 void
+#ifdef WIN32
+analogtv_font_set_char(analogtv_font *f, int c, char *s, analogtv* it)
+#else
 analogtv_font_set_char(analogtv_font *f, int c, char *s)
+#endif
 {
   int value,x,y;
 
@@ -2469,7 +2544,11 @@ analogtv_font_set_char(analogtv_font *f, int c, char *s)
     for (x=0; x<f->char_w; x++) {
       if (!*s) return;
       value=(*s==' ') ? 0 : 1;
-      analogtv_font_set_pixel(f, c, x, y, value);
+#ifdef WIN32
+      analogtv_font_set_pixel(f, c, x, y, value, it);
+#else
+	  analogtv_font_set_pixel(f, c, x, y, value);
+#endif
       s++;
     }
   }
