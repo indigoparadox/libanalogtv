@@ -290,7 +290,7 @@ static int _cache_line_size = sizeof(void *);
 #endif /* HAVE_PTHREAD */
 
 #ifdef WIN32
-static void _thread_util_init(HDC dpy)
+static void _thread_util_init()
 #else
 static void _thread_util_init(Display *dpy)
 #endif
@@ -479,12 +479,16 @@ static unsigned _hardware_concurrency(void)
 #endif
 
 #ifdef WIN32
-unsigned hardware_concurrency(HDC dpy)
+unsigned hardware_concurrency()
 #else
 unsigned hardware_concurrency(Display *dpy)
 #endif
 {
+#ifdef WIN32
+	_thread_util_init();
+#else
 	_thread_util_init(dpy);
+#endif
 #if HAVE_PTHREAD
 	if(_has_pthread >= 0)
 		return _hardware_concurrency();
@@ -725,12 +729,16 @@ static void _unlock_and_destroy(struct threadpool *self)
 #endif /* HAVE_PTHREAD */
 
 #ifdef WIN32
-int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, HDC dpy, unsigned count)
+int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, unsigned count)
 #else
 int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, Display *dpy, unsigned count)
 #endif
 {
+#ifdef WIN32
+	_thread_util_init();
+#else
 	_thread_util_init(dpy);
+#endif
 
 	self->count = count;
 

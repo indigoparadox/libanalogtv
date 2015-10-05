@@ -94,7 +94,7 @@ implied warranty.
 #include "xssemu.h"
 
 #ifdef WIN32
-unsigned hardware_concurrency(HDC dpy);
+unsigned hardware_concurrency();
 #else
 unsigned hardware_concurrency(Display *dpy);
 #endif
@@ -163,8 +163,13 @@ unsigned thread_memory_alignment(Display *dpy);
 */
 
 /* int thread_malloc(void **ptr, Display *dpy, unsigned size); */
+#ifdef WIN32
+#define thread_malloc(ptr, dpy, size) \
+  (aligned_malloc((ptr), thread_memory_alignment(NULL), (size)))
+#else
 #define thread_malloc(ptr, dpy, size) \
   (aligned_malloc((ptr), thread_memory_alignment(dpy), (size)))
+#endif
 
 /*
    This simply does a malloc aligned to thread_memory_alignment(). See
@@ -302,7 +307,7 @@ struct threadpool_class
 /* Returns 0 on success, on failure can return ENOMEM, or any error code from
    threadpool_class.create. */
 #ifdef WIN32
-int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, HDC dpy, unsigned count);
+int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, unsigned count);
 #else
 int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, Display *dpy, unsigned count);
 #endif

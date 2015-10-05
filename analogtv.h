@@ -130,7 +130,6 @@ struct analogtv_yiq_s {
 typedef struct analogtv_s {
 
 #ifdef WIN32
-  HDC dpy;
   HWND window;
 #else
   Display *dpy;
@@ -255,11 +254,13 @@ typedef struct analogtv_s {
   float *signal_subtotals;
 
   float puheight;
+
+  int test_five;
+
 } analogtv;
 
-
 #ifdef WIN32
-PROTO_DLL analogtv *analogtv_allocate(HDC dpy, HWND window);
+PROTO_DLL analogtv *analogtv_allocate(analogtv* it, HWND window);
 #else
 analogtv *analogtv_allocate(Display *dpy, Window window);
 #endif
@@ -289,14 +290,14 @@ PROTO_DLL void analogtv_setup_teletext(analogtv_input *input);
 /* Functions for rendering content into an analogtv_input */
 
 #ifdef WIN32
-PROTO_DLL void analogtv_make_font(HDC dpy, HWND window,
+PROTO_DLL void analogtv_make_font(HWND window,
 #else
 void analogtv_make_font(Display *dpy, Window window,
 #endif
                         analogtv_font *f, int w, int h, char *fontname);
 PROTO_DLL int analogtv_font_pixel(analogtv_font *f, int c, int x, int y);
-PROTO_DLL void analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value);
-PROTO_DLL void analogtv_font_set_char(analogtv_font *f, int c, char *s);
+PROTO_DLL void analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value, analogtv* it);
+PROTO_DLL void analogtv_font_set_char(analogtv_font *f, int c, char *s, analogtv* it);
 PROTO_DLL void analogtv_lcp_to_ntsc(double luma, double chroma, double phase,
                           int ntsc[4]);
 
