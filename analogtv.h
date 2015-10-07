@@ -180,11 +180,13 @@ typedef struct analogtv_s {
   XShmSegmentInfo shm_info;
 #endif
   int visdepth,visclass,visbits;
+#endif
   int red_invprec, red_shift;
   int green_invprec, green_shift;
   int blue_invprec, blue_shift;
   unsigned int red_mask, green_mask, blue_mask;
 
+#ifndef WIN32
   Colormap colormap;
 #endif
   int usewidth,useheight,xrepl,subwidth;
@@ -260,7 +262,7 @@ typedef struct analogtv_s {
 } analogtv;
 
 #ifdef WIN32
-PROTO_DLL analogtv *analogtv_allocate(analogtv* it, HWND window);
+PROTO_DLL analogtv *analogtv_allocate(HWND window);
 #else
 analogtv *analogtv_allocate(Display *dpy, Window window);
 #endif
@@ -296,8 +298,13 @@ void analogtv_make_font(Display *dpy, Window window,
 #endif
                         analogtv_font *f, int w, int h, char *fontname);
 PROTO_DLL int analogtv_font_pixel(analogtv_font *f, int c, int x, int y);
+#ifdef WIN32
 PROTO_DLL void analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value, analogtv* it);
 PROTO_DLL void analogtv_font_set_char(analogtv_font *f, int c, char *s, analogtv* it);
+#else
+PROTO_DLL void analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value);
+PROTO_DLL void analogtv_font_set_char(analogtv_font *f, int c, char *s);
+#endif
 PROTO_DLL void analogtv_lcp_to_ntsc(double luma, double chroma, double phase,
                           int ntsc[4]);
 

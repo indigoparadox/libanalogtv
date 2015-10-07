@@ -299,12 +299,13 @@ analogtv_alloc_image(analogtv *it)
   /* On failure, it->image is NULL. */
 
 #ifdef WIN32
-	HDC dpy = GetDC(it->window);
-	unsigned bits_per_pixel = GetDeviceCaps(dpy, BITSPIXEL) * GetDeviceCaps(dpy, PLANES);
+  HDC dpy = GetDC(it->window);
+  unsigned bits_per_pixel = GetDeviceCaps(dpy, BITSPIXEL) * GetDeviceCaps(dpy, PLANES);
+  unsigned align = thread_memory_alignment(dpy) * 8 - 1;
 #else
   unsigned bits_per_pixel = get_bits_per_pixel(it->dpy, it->xgwa.depth);
+  unsigned align = thread_memory_alignment(it->dpy) * 8 - 1;
 #endif
-  unsigned align = thread_memory_alignment(dpy) * 8 - 1;
   /* Width is in bits. */
   unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
 
@@ -589,6 +590,13 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
   it->use_cmap = 0;
   it->use_color = 1;
 
+  it->red_mask = 0x000000ff;
+  it->green_mask = 0x0000ff00;
+  it->blue_mask = 0x00ff0000;
+  it->red_shift = it->red_invprec = -1;
+  it->green_shift = it->green_invprec = -1;
+  it->blue_shift = it->blue_invprec = -1;
+
   analogtv_configure(it);
 #else
   XGetWindowAttributes(it->dpy, it->window, &it->xgwa);
@@ -627,6 +635,8 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
   it->red_shift=it->red_invprec=-1;
   it->green_shift=it->green_invprec=-1;
   it->blue_shift=it->blue_invprec=-1;
+#endif
+
   if (!it->use_cmap) {
     /* Is there a standard way to do this? Does this handle all cases? */
     int shift, prec;
@@ -660,6 +670,7 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
                                     "background", "Background");
 */
 
+#ifndef WIN32
   XColor color;
   color.flags = DoRed|DoGreen|DoBlue;
   color.red = color.green = color.blue = 0; /* Black */
@@ -669,10 +680,9 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
   it->gc = XCreateGC(it->dpy, it->window, GCBackground, &gcv);
   XSetWindowBackground(it->dpy, it->window, gcv.background);
   XClearWindow(dpy,window);
+#endif
 
   analogtv_configure(it);
-
-#endif
 
   return it;
 
@@ -1502,7 +1512,8 @@ analogtv_blast_imagerow(const analogtv *it,
 
 #ifdef WIN32
   // TESTME
-  HDC hdcMem = CreateCompatibleDC(it->image);
+  HDC dpy = GetDC(it->window);
+  HDC hdcMem = CreateCompatibleDC(dpy);
   SelectObject(hdcMem, it->image);
   for (y = ytop; y < ybot; y++) {
 	  unsigned line = y - ytop;
@@ -1515,6 +1526,7 @@ analogtv_blast_imagerow(const analogtv *it,
 		  if (ntscgi >= ANALOGTV_CV_MAX) ntscgi = ANALOGTV_CV_MAX - 1;
 		  if (ntscbi >= ANALOGTV_CV_MAX) ntscbi = ANALOGTV_CV_MAX - 1;
 		  for (j = 0; j < xrepl; j++) {
+			  // TODO: Replace with faster operations.
 			  SetPixel(hdcMem, x*xrepl + j, y, it->red_values[ntscri] | it->green_values[ntscgi] | it->blue_values[ntscbi]);
 		  }
 	  }
@@ -2424,6 +2436,7 @@ analogtv_make_font(Display *dpy, Window window, analogtv_font *f,
                    int w, int h, char *fontname)
 {
 #ifdef WIN32
+	// XXX
 #else
   int i;
   XFontStruct *font;
