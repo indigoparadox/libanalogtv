@@ -1527,7 +1527,7 @@ analogtv_blast_imagerow(const analogtv *it,
 		  if (ntscbi >= ANALOGTV_CV_MAX) ntscbi = ANALOGTV_CV_MAX - 1;
 		  for (j = 0; j < xrepl; j++) {
 			  // TODO: Replace with faster operations.
-			  SetPixel(hdcMem, x*xrepl + j, y, it->red_values[ntscri] | it->green_values[ntscgi] | it->blue_values[ntscbi]);
+			  SetPixelV(hdcMem, x*xrepl + j, y, it->red_values[ntscri] | it->green_values[ntscgi] | it->blue_values[ntscbi]);
 		  }
 	  }
   }
@@ -1754,18 +1754,22 @@ static void analogtv_thread_draw_lines(void *thread_raw)
 
         x=0;
         i=scanstart_i;
+#ifdef WIN32
+		HDC hdcMem = CreateCompatibleDC(it->image);
+		HBITMAP oldBitmap = SelectObject(hdcMem, it->image);
+#endif
         while (i<0 && x<it->usewidth) {
 #ifdef WIN32
-          HDC hdcMem = CreateCompatibleDC(it->image);
-          HBITMAP oldBitmap = SelectObject(hdcMem, it->image);
-          SetPixel(hdcMem, x, y, it->colors[0]);
-          DeleteDC(hdcMem);
+		  SetPixelV(hdcMem, x, y, it->colors[0]);
 #else
           XPutPixel(it->image, x, y, it->colors[0]);
 #endif
           i+=pixmultinc;
           x++;
         }
+#ifdef WIN32
+		DeleteDC(hdcMem);
+#endif
 
         while (i<scanend_i && x<it->usewidth) {
           float pixfrac=(i&0xffff)/65536.0f;
@@ -1801,34 +1805,42 @@ static void analogtv_thread_draw_lines(void *thread_raw)
           }
 #endif
 
+#ifdef WIN32
+		  HDC hdcMem = CreateCompatibleDC(it->image);
+		  HBITMAP oldBitmap = SelectObject(hdcMem, it->image);
+#endif
           for (j=0; j<it->xrepl; j++) {
 #ifdef WIN32
-			HDC hdcMem = CreateCompatibleDC(it->image);
-			HBITMAP oldBitmap = SelectObject(hdcMem, it->image);
-			SetPixel(hdcMem, x, y, it->colors[cmi]);
-            DeleteDC(hdcMem);
+			SetPixelV(hdcMem, x, y, it->colors[cmi]);
 #else
             XPutPixel(it->image, x, y,
                       it->colors[cmi]);
 #endif
             x++;
           }
+#ifdef WIN32
+		  DeleteDC(hdcMem);
+#endif
           if (i >= squishright_i) {
             pixmultinc += pixmultinc/squishdiv;
           }
           i+=pixmultinc;
         }
+#ifdef WIN32
+		hdcMem = CreateCompatibleDC(it->image);
+		oldBitmap = SelectObject(hdcMem, it->image);
+#endif
         while (x<it->usewidth) {
 #ifdef WIN32
-          HDC hdcMem = CreateCompatibleDC(it->image);
-          HBITMAP oldBitmap = SelectObject(hdcMem, it->image);
-          SetPixel(hdcMem, x, y, it->colors[0]);
-          DeleteDC(hdcMem);
+		  SetPixelV(hdcMem, x, y, it->colors[0]);
 #else
           XPutPixel(it->image, x, y, it->colors[0]);
 #endif
           x++;
         }
+#ifdef WIN32
+		DeleteDC(hdcMem);
+#endif
       }
     }
     else {
@@ -2533,7 +2545,7 @@ analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value)
   HDC hdcMem = CreateCompatibleDC(dpy);
   SelectObject(hdcMem, f->text_im);
 
-  SetPixel(hdcMem, c*f->char_w + x, y, value);
+  SetPixelV(hdcMem, c*f->char_w + x, y, value);
 
   DeleteDC(hdcMem);
   ReleaseDC(it->window, dpy);
