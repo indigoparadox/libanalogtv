@@ -1388,6 +1388,8 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
     if (s>=se) s=ss;
   }
 
+//#ifndef WIN32
+  // XXX
   dp[0]=0.0;
   s2 = s;
   for (i=1; i<5; i++) {
@@ -1396,12 +1398,14 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
       s2 += ANALOGTV_SIGNAL_LEN;
     dp[i] = (float)((int)s2[0]+(int)s2[1]+(int)s2[2]+(int)s2[3]);
   }
+//#endif
 
   assert(p <= pe);
   assert(!((pe - p) % 4));
   while (p != pe) {
     float sig0,sig1,sig2,sig3,sigr;
 
+	// XXX: Crashing in windows.
     sig0=(float)s[0];
     sig1=(float)s[1];
     sig2=(float)s[2];
@@ -1913,13 +1917,8 @@ static void analogtv_thread_draw_lines(void *thread_raw)
 }
 
 PROTO_DLL void
-#ifdef WIN32
 analogtv_draw(analogtv *it, double noiselevel,
               const analogtv_reception *const *recs, unsigned rec_count)
-#else
-analogtv_draw(analogtv *it, double noiselevel,
-	const analogtv_reception *const *recs, unsigned rec_count)
-#endif
 {
   int i,lineno;
   /*  int bigloadchange,drawcount;*/
@@ -1945,9 +1944,12 @@ analogtv_draw(analogtv *it, double noiselevel,
            (level * level * (1.0 + 4.0*(rec->ghostfir[0] + rec->ghostfir[1] +
                                         rec->ghostfir[2] + rec->ghostfir[3]))));
 
+//#ifndef WIN32
+	// XXX
     /* duplicate the first line into the Nth line to ease wraparound computation */
     memcpy(inp->signal[ANALOGTV_V], inp->signal[0],
            ANALOGTV_H * sizeof(inp->signal[0][0]));
+//#endif
   }
 
   analogtv_setup_frame(it);
@@ -1963,6 +1965,9 @@ analogtv_draw(analogtv *it, double noiselevel,
 
   it->channel_change_cycles=0;
 
+//#ifndef WIN32
+  // XXX
+  
   /* rx_signal has an extra 2 lines at the end, where we copy the
      first 2 lines so we can index into it while only worrying about
      wraparound on a per-line level */
@@ -1975,6 +1980,8 @@ analogtv_draw(analogtv *it, double noiselevel,
   memcpy(&it->signal_subtotals[ANALOGTV_SIGNAL_LEN / ANALOGTV_SUBTOTAL_LEN],
          &it->signal_subtotals[0],
          (2*ANALOGTV_H/ANALOGTV_SUBTOTAL_LEN)*sizeof(it->signal_subtotals[0]));
+
+//#endif
 
   analogtv_sync(it); /* Requires the add_signals be complete. */
 
@@ -2210,7 +2217,23 @@ analogtv_input_allocate()
 {
   analogtv_input *ret=(analogtv_input *)calloc(1,sizeof(analogtv_input));
 
+  ret->signal = (char *)calloc((ANALOGTV_V + 1)*ANALOGTV_H, sizeof(char));
+
   return ret;
+}
+
+PROTO_DLL analogtv_reception *
+analogtv_reception_allocate(float level, analogtv_input *input)
+{
+	analogtv_reception *ret = (analogtv_reception *)calloc(1, sizeof(analogtv_reception));
+
+	ret->input = input;
+
+	ret->level = level;
+	ret->ofs = 0;
+	ret->multipath = 0.0;
+
+	return ret;
 }
 
 /*

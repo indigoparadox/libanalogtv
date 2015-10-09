@@ -52,6 +52,8 @@ namespace libAnalogTV.Interop {
 
         public const int ANALOGTV_SIGNAL_LEN = ANALOGTV_V * ANALOGTV_H;
 
+#if false
+
         [StructLayout( LayoutKind.Sequential )]
         public struct analogtv_reception {
 
@@ -218,6 +220,8 @@ namespace libAnalogTV.Interop {
             int test_five;
         }
 
+#endif
+
 #if false
         [StructLayout( LayoutKind.Sequential )]
         public struct analogtv {
@@ -344,6 +348,9 @@ namespace libAnalogTV.Interop {
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern IntPtr analogtv_input_allocate();
+
+        [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
+        public static extern IntPtr analogtv_reception_allocate( float level, IntPtr input );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern void analogtv_draw( IntPtr it, double noiselevel, IntPtr recs, uint rec_count );

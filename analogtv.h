@@ -82,7 +82,8 @@ enum {
 };
 
 typedef struct analogtv_input_s {
-  signed char signal[ANALOGTV_V+1][ANALOGTV_H];
+  //signed char signal[ANALOGTV_V+1][ANALOGTV_H];
+  char *signal;
 
   int do_teletext;
 
@@ -267,6 +268,7 @@ PROTO_DLL analogtv *analogtv_allocate(HWND window);
 analogtv *analogtv_allocate(Display *dpy, Window window);
 #endif
 PROTO_DLL analogtv_input *analogtv_input_allocate(void);
+PROTO_DLL analogtv_reception *analogtv_reception_allocate(float level, analogtv_input *input);
 
 /* call if window size changes */
 PROTO_DLL void analogtv_reconfigure(analogtv *it);
