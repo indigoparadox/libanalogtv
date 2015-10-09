@@ -2217,8 +2217,6 @@ analogtv_input_allocate()
 {
   analogtv_input *ret=(analogtv_input *)calloc(1,sizeof(analogtv_input));
 
-  ret->signal = (char *)calloc((ANALOGTV_V + 1)*ANALOGTV_H, sizeof(char));
-
   return ret;
 }
 
