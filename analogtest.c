@@ -84,6 +84,7 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, INT nS
 
 #else
 int main(void) {
+#ifdef X11
    Display* dpy;
    Window rootwin;
    Window win;
@@ -113,7 +114,11 @@ int main(void) {
    XSelectInput( dpy, win, ExposureMask | ButtonPressMask );
 
    XMapWindow( dpy, win );
+#elif defined ALLEGRO
+   allegro_init();
 
+   BITMAP* dpy = screen;
+#endif
 #endif
 
    //reception = calloc( 1, sizeof( analogtv_reception ) );
@@ -131,8 +136,10 @@ int main(void) {
 
 #ifdef WIN32
    tv = analogtv_allocate( win );
-#else
+#elif defined X11
    tv = analogtv_allocate( dpy, win );
+#elif defined ALLEGRO
+   tv = analogtv_allocate();
 #endif
 
    analogtv_set_defaults( tv, "" );
@@ -183,3 +190,7 @@ int main(void) {
 
    return 0;   
 }
+#ifdef ALLEGRO
+END_OF_MAIN()
+#endif
+

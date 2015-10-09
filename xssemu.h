@@ -2,7 +2,7 @@
 #ifndef XSSEMU_H
 #define XSSEMU_H
 
-#ifdef WIN32
+#if defined WIN32 || defined ALLEGRO
 //#define Display HDC
 #define ZPixmap NULL
 //#define Window WINDOW
@@ -10,7 +10,11 @@
 #define LSBFirst 1
 #define MSBFirst 0
 
+#ifdef WIN32
 #define PROTO_DLL __declspec(dllexport)
+#else
+#define PROTO_DLL
+#endif
 
 typedef struct {
 	unsigned long pixel;			/* pixel value */

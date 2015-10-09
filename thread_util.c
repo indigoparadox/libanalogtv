@@ -291,8 +291,10 @@ static int _cache_line_size = sizeof(void *);
 
 #ifdef WIN32
 static void _thread_util_init()
-#else
+#elif defined X11
 static void _thread_util_init(Display *dpy)
+#elif defined ALLEGRO
+static void _thread_util_init(BITMAP *dpy)
 #endif
 {
 #if HAVE_PTHREAD
@@ -480,8 +482,10 @@ static unsigned _hardware_concurrency(void)
 
 #ifdef WIN32
 unsigned hardware_concurrency()
-#else
+#elif defined X11
 unsigned hardware_concurrency(Display *dpy)
+#elif defined ALLEGRO
+unsigned hardware_concurrency(BITMAP *dpy)
 #endif
 {
 #ifdef WIN32
@@ -500,8 +504,10 @@ unsigned hardware_concurrency(Display *dpy)
 
 #ifdef WIN32
 unsigned thread_memory_alignment(HDC dpy)
-#else
+#elif defined X11
 unsigned thread_memory_alignment(Display *dpy)
+#elif defined ALLEGRO
+unsigned thread_memory_alignment(BITMAP *dpy)
 #endif
 {
 	_thread_util_init(dpy);
@@ -730,8 +736,10 @@ static void _unlock_and_destroy(struct threadpool *self)
 
 #ifdef WIN32
 int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, unsigned count)
-#else
+#elif defined X11
 int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, Display *dpy, unsigned count)
+#elif defined ALLEGRO
+int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, BITMAP *dpy, unsigned count)
 #endif
 {
 #ifdef WIN32

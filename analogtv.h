@@ -17,6 +17,8 @@
 #ifdef HAVE_XSHM_EXTENSION
 #include "xshm.h"
 #endif
+#elif defined ALLEGRO
+# include <allegro.h>
 #endif
 
 #ifdef WIN32
@@ -98,8 +100,10 @@ typedef struct analogtv_input_s {
 typedef struct analogtv_font_s {
 #ifdef WIN32
 	HBITMAP text_im;
-#else
+#elif defined X11
   XImage *text_im;
+#elif defined ALLEGRO
+  BITMAP *text_im;
 #endif
   int char_w, char_h;
   int x_mult, y_mult;
@@ -133,11 +137,13 @@ typedef struct analogtv_s {
 
 #ifdef WIN32
   HWND window;
-#else
+#elif defined X11
   Display *dpy;
   Window window;
   Screen *screen;
   XWindowAttributes xgwa;
+#elif defined ALLEGRO
+  BITMAP *dpy; /* Just a copy of screen. */
 #endif
 
   struct threadpool threads;
@@ -177,7 +183,7 @@ typedef struct analogtv_s {
   int use_shm,use_cmap,use_color;
   int bilevel_signal;
 
-#ifndef WIN32
+#ifdef X11
 #ifdef HAVE_XSHM_EXTENSION
   XShmSegmentInfo shm_info;
 #endif
@@ -188,15 +194,17 @@ typedef struct analogtv_s {
   int blue_invprec, blue_shift;
   unsigned int red_mask, green_mask, blue_mask;
 
-#ifndef WIN32
+#ifdef X11
   Colormap colormap;
 #endif
   int usewidth,useheight,xrepl,subwidth;
-#ifndef WIN32
+#ifdef X11
   XImage *image; /* usewidth * useheight */
   GC gc;
-#else
+#elif defined WIN32
   HBITMAP image;
+#elif defined ALLEGRO
+  BITMAP* image;
 #endif
   int screen_xo,screen_yo; /* centers image in window */
 
@@ -265,8 +273,10 @@ typedef struct analogtv_s {
 
 #ifdef WIN32
 PROTO_DLL analogtv *analogtv_allocate(HWND window);
-#else
+#elif defined X11
 analogtv *analogtv_allocate(Display *dpy, Window window);
+#elif defined ALLEGRO
+analogtv *analogtv_allocate();
 #endif
 PROTO_DLL analogtv_input *analogtv_input_allocate(void);
 PROTO_DLL analogtv_reception *analogtv_reception_allocate(float level, analogtv_input *input);
@@ -283,8 +293,10 @@ PROTO_DLL void analogtv_draw(analogtv *it, double noiselevel, const analogtv_rec
 
 #ifdef WIN32
 PROTO_DLL int analogtv_load_ximage(analogtv *it, analogtv_input *input, HBITMAP pic_im);
-#else
+#elif defined X11
 int analogtv_load_ximage(analogtv *it, analogtv_input *input, XImage *pic_im);
+#elif defined ALLEGRO
+int analogtv_load_ximage(analogtv *it, analogtv_input *input, BITMAP *pic_im);
 #endif
 
 PROTO_DLL void analogtv_reception_update(analogtv_reception *inp);
@@ -296,8 +308,10 @@ PROTO_DLL void analogtv_setup_teletext(analogtv_input *input);
 
 #ifdef WIN32
 PROTO_DLL void analogtv_make_font(HWND window,
-#else
+#elif defined X11
 void analogtv_make_font(Display *dpy, Window window,
+#elif defined ALLEGRO
+void analogtv_make_font(
 #endif
                         analogtv_font *f, int w, int h, char *fontname);
 PROTO_DLL int analogtv_font_pixel(analogtv_font *f, int c, int x, int y);
