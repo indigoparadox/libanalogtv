@@ -31,9 +31,7 @@ namespace AnalogTVTest {
             for( int i = 0 ; this.Height > i ; i++ ) {
                 this.pixels[i] = new int[this.Height];
             }
-
-            //AnalogTV.analogtv_reception rec = new AnalogTV.analogtv_reception();
-            //this.rec_ptr = 
+            
             this.tv_ptr = AnalogTV.analogtv_allocate( this.Handle );
             IntPtr input_ptr = AnalogTV.analogtv_input_allocate();
             AnalogTV.analogtv_set_defaults( this.tv_ptr, new StringBuilder( "" ) );
@@ -56,30 +54,17 @@ namespace AnalogTVTest {
 
             this.rec_ptr = AnalogTV.analogtv_reception_allocate( 2.0f, input_ptr );
 
-            //this.rec_ptr = Marshal.AllocHGlobal( Marshal.SizeOf( rec ) );
-            //Marshal.StructureToPtr( rec, this.rec_ptr, false );
-
             Timer TPaint = new Timer();
-            TPaint.Interval = 100;
+            TPaint.Interval = 1;
             TPaint.Tick += this.TPaint_Tick;
             TPaint.Enabled = true;
             TPaint.Start();
         }
 
         private void TPaint_Tick( Object sender, EventArgs e ) {
-            //using( Graphics g = this.CreateGraphics() ) {
             AnalogTV.analogtv_reception_update( this.rec_ptr );
 
-            //g.FillRectangle( Brushes.Blue, 0, 0, 100, 100 );
-
-            //AnalogTV.analogtv fr = (AnalogTV.analogtv)Marshal.PtrToStructure( this.tv, typeof( AnalogTV.analogtv) );
-
-            try {
-                AnalogTV.analogtv_draw( this.tv_ptr, 0.04, this.rec_ptr, 1 );
-            }catch(AccessViolationException ex ) {
-                Debug.WriteLine( ex.Message );
-            }
-            //}
+            AnalogTV.analogtv_draw( this.tv_ptr, 0.04, ref this.rec_ptr, 1 );
         }
     }
 }
