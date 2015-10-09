@@ -159,6 +159,10 @@ int main(void) {
                         ANALOGTV_TOP, ANALOGTV_BOT,
                         field_ntsc );
 
+   analogtv_color(10, field_ntsc);
+
+   analogtv_draw_solid(inp, 100, 100, 100, 100, field_ntsc);
+
 #ifdef WIN32
    SetTimer(win, IDT_TIMER1, 50, (TIMERPROC)NULL);
 
