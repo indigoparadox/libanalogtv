@@ -1,7 +1,7 @@
 
-LIBS := -lm -lX11
+LIBS := -lm -lalleg -lX11
 
-CFLAGS := -DGETTIMEOFDAY_TWO_ARGS -fPIC
+CFLAGS := -DGETTIMEOFDAY_TWO_ARGS -DX11 -fPIC
 
 all: libanalogtv.so analogtest
 

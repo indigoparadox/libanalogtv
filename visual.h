@@ -12,6 +12,11 @@
 #ifndef __VISUAL_H__
 #define __VISUAL_H__
 
+#ifdef X11
+
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+
 extern Visual *get_visual (Screen *, const char *name, Bool, Bool);
 extern Visual *get_visual_resource (Screen *, char *, char *, Bool);
 extern int visual_depth (Screen *, Visual *);
@@ -29,5 +34,7 @@ extern int get_bits_per_pixel(Display *dpy, int depth);
 extern Visual *get_gl_visual (Screen *);
 extern void describe_gl_visual (FILE *, Screen *, Visual *, Bool priv_cmap_p);
 extern Bool validate_gl_visual (FILE *, Screen *, const char *, Visual *);
+
+#endif
 
 #endif /* __VISUAL_H__ */

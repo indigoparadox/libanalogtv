@@ -87,16 +87,20 @@ implied warranty.
 #	include <windows.h>
 #elif defined HAVE_COCOA
 #	include "jwxyz.h"
-#else
+#elif defined X11
 #	include <X11/Xlib.h>
+#elif defined ALLEGRO
+#   include <allegro.h>
 #endif
 
 #include "xssemu.h"
 
 #ifdef WIN32
 unsigned hardware_concurrency();
-#else
+#elif defined X11
 unsigned hardware_concurrency(Display *dpy);
+#elif defined ALLEGRO
+unsigned hardware_concurrency(BITMAP *dpy);
 #endif
 /* This is supposed to return the number of available CPU cores. This number
    isn't necessarily constant: a system administrator can hotplug or
@@ -110,8 +114,10 @@ unsigned hardware_concurrency(Display *dpy);
 
 #ifdef WIN32
 unsigned thread_memory_alignment(HDC dpy);
-#else
+#elif defined X11
 unsigned thread_memory_alignment(Display *dpy);
+#elif defined ALLEGRO
+unsigned thread_memory_alignment(BITMAP *dpy);
 #endif
 
 /* Returns the proper alignment for memory allocated by a thread that is
@@ -308,8 +314,10 @@ struct threadpool_class
    threadpool_class.create. */
 #ifdef WIN32
 int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, unsigned count);
-#else
+#elif defined X11
 int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, Display *dpy, unsigned count);
+#elif defined ALLEGRO
+int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, BITMAP *dpy, unsigned count);
 #endif
 void threadpool_destroy(struct threadpool *self);
 

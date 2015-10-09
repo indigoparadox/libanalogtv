@@ -79,13 +79,15 @@ char* progname = "analogtv";
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
+#include <stdio.h>
 //#include "utils.h"
 //#include "resources.h"
 #include "analogtv.h"
 #include "yarandom.h"
 //#include "grabscreen.h"
-//#include "visual.h"
-
+#ifdef X11
+#include "visual.h"
+#endif
 /* #define DEBUG 1 */
 
 #if defined(DEBUG) && (defined(__linux) || defined(__FreeBSD__))
@@ -268,13 +270,10 @@ analogtv_set_defaults(analogtv *it, char *prefix)
 static void
 analogtv_free_image(analogtv *it)
 {
+  if (it->image) {
 #ifdef WIN32
-  if (it->image) {
     DeleteObject(it->image);
-	it->image = NULL;
-  }
 #elif defined X11
-  if (it->image) {
     if (it->use_shm) {
 #ifdef HAVE_XSHM_EXTENSION
       destroy_xshm_image(it->dpy, it->image, &it->shm_info);
@@ -284,9 +283,11 @@ analogtv_free_image(analogtv *it)
       it->image->data = NULL;
       XDestroyImage(it->image);
     }
+#elif defined ALLEGRO
+    destroy_bitmap(it->image);
+#endif
     it->image=NULL;
   }
-#endif
 }
 
 static void
@@ -301,6 +302,9 @@ analogtv_alloc_image(analogtv *it)
 #elif defined X11
   unsigned bits_per_pixel = get_bits_per_pixel(it->dpy, it->xgwa.depth);
   unsigned align = thread_memory_alignment(it->dpy) * 8 - 1;
+#elif defined ALLEGRO
+  unsigned bits_per_pixel = bitmap_color_depth(screen);
+  unsigned align = thread_memory_alignment(screen) * 8 - 1;
 #endif
   /* Width is in bits. */
   unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
@@ -315,10 +319,10 @@ analogtv_alloc_image(analogtv *it)
   }
   if (!it->image) {
 #ifdef WIN32
-	RECT windrect;
-	GetWindowRect(it->window, &windrect);
-	it->image = CreateBitmap(windrect.right - windrect.left, windrect.bottom - windrect.top,
-		GetDeviceCaps(dpy, PLANES), GetDeviceCaps(dpy, BITSPIXEL), NULL);
+    RECT windrect;
+    GetWindowRect(it->window, &windrect);
+    it->image = CreateBitmap(windrect.right - windrect.left, windrect.bottom - windrect.top,
+      GetDeviceCaps(dpy, PLANES), GetDeviceCaps(dpy, BITSPIXEL), NULL);
 #elif defined X11
     it->image = XCreateImage(it->dpy, it->xgwa.visual, it->xgwa.depth, ZPixmap, 0, 0,
                              it->usewidth, it->useheight, 8, width / 8);
@@ -330,6 +334,8 @@ analogtv_alloc_image(analogtv *it)
         it->image = NULL;
       }
     }
+#elif defined ALLEGRO
+    it->image = create_video_bitmap(it->usewidth, it->useheight);
 #endif
   }
 
@@ -353,7 +359,7 @@ analogtv_configure(analogtv *it)
 {
   int oldwidth=it->usewidth;
   int oldheight=it->useheight;
-  int wlim,hlim,height_diff;
+  int height_diff;
 
   /* If the window is very small, don't let the image we draw get lower
      than the actual TV resolution (266x200.)
@@ -376,11 +382,14 @@ analogtv_configure(analogtv *it)
 #ifdef WIN32
   RECT windrect;
   GetWindowRect(it->window, &windrect);
-  hlim = windrect.bottom - windrect.top;
-  wlim = windrect.right - windrect.left;
+  int hlim = windrect.bottom - windrect.top;
+  int wlim = windrect.right - windrect.left;
 #elif defined X11
-  hlim = it->xgwa.height;
-  wlim = it->xgwa.width;
+  int hlim = it->xgwa.height;
+  int wlim = it->xgwa.width;
+#elif defined ALLEGRO
+  int hlim = SCREEN_H;
+  int wlim = SCREEN_W;
 #endif
   ratio = wlim / (float) hlim;
 
@@ -452,12 +461,12 @@ analogtv_configure(analogtv *it)
     analogtv_alloc_image(it);
   }
 
-#ifdef WIN32
-  it->screen_xo = 0;
-  it->screen_yo = 0;
-#elif defined X11
+#ifdef X11
   it->screen_xo = (it->xgwa.width-it->usewidth)/2;
   it->screen_yo = (it->xgwa.height-it->useheight)/2;
+#elif defined WIN32 || defined ALLEGRO
+  it->screen_xo = 0;
+  it->screen_yo = 0;
 #endif
   it->need_clear=1;
 }
@@ -499,6 +508,9 @@ static int analogtv_thread_create(void *thread_raw, struct threadpool *threads,
 #elif defined X11
   align = thread_memory_alignment(thread->it->dpy) /
 	  sizeof(thread->it->signal_subtotals[0]);
+#elif defined ALLEGRO
+  align = thread_memory_alignment(screen) /
+	  sizeof(thread->it->signal_subtotals[0]);
 #endif
   if (!align)
     align = 1;
@@ -520,6 +532,8 @@ static void analogtv_thread_destroy(void *thread_raw)
 PROTO_DLL analogtv *analogtv_allocate(HWND window)
 #elif defined X11
 analogtv *analogtv_allocate(Display *dpy, Window window)
+#elif defined ALLEGRO
+analogtv *analogtv_allocate()
 #endif
 {
   static const struct threadpool_class cls = {
@@ -545,26 +559,29 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
 
 #ifdef X11
   it->dpy=dpy;
+#elif defined ALLEGRO
+  it->dpy = screen;
 #endif
+#ifndef ALLEGRO
   it->window=window;
+#endif
 
-  if (thread_malloc((void **)&it->rx_signal, dpy,
+  if (thread_malloc((void **)&it->rx_signal, it->dpy,
                     sizeof(it->rx_signal[0]) * rx_signal_len))
     goto fail;
 
   assert(!(ANALOGTV_SIGNAL_LEN % ANALOGTV_SUBTOTAL_LEN));
-  if (thread_malloc((void **)&it->signal_subtotals, dpy,
+  if (thread_malloc((void **)&it->signal_subtotals, it->dpy,
                     sizeof(it->signal_subtotals[0]) *
                      (rx_signal_len / ANALOGTV_SUBTOTAL_LEN)))
     goto fail;
 
 #ifdef WIN32
   if (threadpool_create(&it->threads, &cls, hardware_concurrency()))
-	  goto fail;
-#elif defined X11
-  if (threadpool_create(&it->threads, &cls, dpy, hardware_concurrency(dpy)))
-    goto fail;
+#elif defined X11 || defined ALLEGRO
+  if (threadpool_create(&it->threads, &cls, it->dpy, hardware_concurrency(it->dpy)))
 #endif
+	  goto fail;
 
   assert(it->threads.count);
 
@@ -588,8 +605,6 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
   it->red_shift = it->red_invprec = -1;
   it->green_shift = it->green_invprec = -1;
   it->blue_shift = it->blue_invprec = -1;
-
-  analogtv_configure(it);
 #elif defined X11
   XGetWindowAttributes(it->dpy, it->window, &it->xgwa);
 
@@ -627,7 +642,19 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
   it->red_shift=it->red_invprec=-1;
   it->green_shift=it->green_invprec=-1;
   it->blue_shift=it->blue_invprec=-1;
+#elif defined ALLEGRO
+  it->use_cmap = 0;
+  it->use_color = 1;
+
+  it->red_mask = 0x000000ff;
+  it->green_mask = 0x0000ff00;
+  it->blue_mask = 0x00ff0000;
+  it->red_shift = it->red_invprec = -1;
+  it->green_shift = it->green_invprec = -1;
+  it->blue_shift = it->blue_invprec = -1;
 #endif
+
+  analogtv_configure(it);
 
   if (!it->use_cmap) {
     /* Is there a standard way to do this? Does this handle all cases? */
@@ -695,7 +722,6 @@ analogtv_release(analogtv *it)
   if (it->image) {
 #ifdef WIN32
     DeleteObject(it->image);
-	it->image = NULL;
 #elif defined X11
     if (it->use_shm) {
 #ifdef HAVE_XSHM_EXTENSION
@@ -706,8 +732,10 @@ analogtv_release(analogtv *it)
       it->image->data = NULL;
       XDestroyImage(it->image);
     }
-    it->image=NULL;
+#elif defined ALLEGRO
+    destroy_bitmap(it->image);
 #endif
+    it->image=NULL;
   }
 #ifdef X11
   if (it->gc) XFreeGC(it->dpy, it->gc);
@@ -2236,6 +2264,8 @@ PROTO_DLL int
 analogtv_load_ximage(analogtv *it, analogtv_input *input, HBITMAP pic_im)
 #elif defined X11
 analogtv_load_ximage(analogtv *it, analogtv_input *input, XImage *pic_im)
+#elif defined ALLEGRO
+analogtv_load_ximage(analogtv *it, analogtv_input *input, BITMAP *pic_im)
 #endif
 {
   int i,x,y;
@@ -2456,6 +2486,8 @@ void
 analogtv_make_font(HWND window, analogtv_font *f,
 #elif defined X11
 analogtv_make_font(Display *dpy, Window window, analogtv_font *f,
+#elif defined ALLEGRO
+analogtv_make_font(analogtv_font *f,
 #endif
                    int w, int h, char *fontname)
 {

@@ -14,6 +14,8 @@
    or: having writable color cells...)
  */
 
+#ifdef X11
+
 #include "utils.h"
 //#include "resources.h"  /* for get_string_resource() */
 #include "visual.h"
@@ -586,3 +588,6 @@ get_bits_per_pixel(Display *dpy, int depth)
   XFree (formats);
   return result;
 }
+
+#endif
+
