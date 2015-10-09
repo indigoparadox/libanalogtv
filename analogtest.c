@@ -116,8 +116,10 @@ int main(void) {
 
 #endif
 
-   reception = calloc( 1, sizeof( analogtv_reception ) );
-   analogtv_input* inp = calloc( 1, sizeof( analogtv_input ) );
+   //reception = calloc( 1, sizeof( analogtv_reception ) );
+   //analogtv_input* inp = calloc( 1, sizeof( analogtv_input ) );
+   analogtv_input* inp = analogtv_input_allocate();
+   reception = analogtv_reception_allocate(2.0f, inp);
    int field_ntsc[4] = { 0 };
    uint8_t pixels[32][32];
    int x, y;
@@ -136,10 +138,12 @@ int main(void) {
    analogtv_set_defaults( tv, "" );
    analogtv_setup_sync( inp, 1, 0 );
 
+   /*
    reception->input = inp;
    reception->level = 2.0;
    reception->ofs = 0;
    reception->multipath = 0.0;
+   */
 
    analogtv_lcp_to_ntsc( ANALOGTV_BLACK_LEVEL, 0.0, 0.0, field_ntsc );
 
@@ -149,7 +153,7 @@ int main(void) {
                         field_ntsc );
 
 #ifdef WIN32
-   SetTimer(win, IDT_TIMER1, 1000, (TIMERPROC)NULL);
+   SetTimer(win, IDT_TIMER1, 50, (TIMERPROC)NULL);
 
    MSG msg;
 

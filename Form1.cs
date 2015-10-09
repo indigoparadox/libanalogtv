@@ -9,12 +9,13 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using libAnalogTV.Interop;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace AnalogTVTest {
     public partial class Form1 : Form {
 
         //private Graphics g;
-        private IntPtr tv;
+        private IntPtr tv_ptr;
         //private AnalogTV.analogtv_reception rec;
         private IntPtr rec_ptr;
         private int[][] pixels;
@@ -31,22 +32,18 @@ namespace AnalogTVTest {
                 this.pixels[i] = new int[this.Height];
             }
 
-            AnalogTV.analogtv_reception rec = new AnalogTV.analogtv_reception();
+            //AnalogTV.analogtv_reception rec = new AnalogTV.analogtv_reception();
             //this.rec_ptr = 
-            this.tv = AnalogTV.analogtv_allocate( this.Handle );
-            rec.input = AnalogTV.analogtv_input_allocate();
-            AnalogTV.analogtv_set_defaults( this.tv, new StringBuilder( "" ) );
-            AnalogTV.analogtv_setup_sync( rec.input, 1, 0 );
+            this.tv_ptr = AnalogTV.analogtv_allocate( this.Handle );
+            IntPtr input_ptr = AnalogTV.analogtv_input_allocate();
+            AnalogTV.analogtv_set_defaults( this.tv_ptr, new StringBuilder( "" ) );
+            AnalogTV.analogtv_setup_sync( input_ptr, 1, 0 );
             
-            rec.level = 2.0;
-            rec.ofs = 0;
-            rec.multipath = 0.0;
-
             int[] field_ntsc = new int[4] { 0, 0, 0, 0 };
             AnalogTV.analogtv_lcp_to_ntsc( AnalogTV.ANALOGTV_BLACK_LEVEL, 0.0, 0.0, field_ntsc );
 
             AnalogTV.analogtv_draw_solid(
-                rec.input,
+                input_ptr,
                 AnalogTV.ANALOGTV_VIS_START,
                 AnalogTV.ANALOGTV_VIS_END,
                 AnalogTV.ANALOGTV_TOP,
@@ -55,11 +52,12 @@ namespace AnalogTVTest {
             );
 
             AnalogTV.analogtv_lcp_to_ntsc( AnalogTV.ANALOGTV_BLACK_LEVEL, 0.0, 0.0, this.ntsc );
-            AnalogTV.analogtv_draw_solid( rec.input, AnalogTV.ANALOGTV_VIS_START, AnalogTV.ANALOGTV_VIS_END, AnalogTV.ANALOGTV_TOP, AnalogTV.ANALOGTV_BOT, this.ntsc );
+            AnalogTV.analogtv_draw_solid( input_ptr, AnalogTV.ANALOGTV_VIS_START, AnalogTV.ANALOGTV_VIS_END, AnalogTV.ANALOGTV_TOP, AnalogTV.ANALOGTV_BOT, this.ntsc );
 
+            this.rec_ptr = AnalogTV.analogtv_reception_allocate( 2.0f, input_ptr );
 
-            this.rec_ptr = Marshal.AllocHGlobal( Marshal.SizeOf( rec ) );
-            Marshal.StructureToPtr( rec, this.rec_ptr, false );
+            //this.rec_ptr = Marshal.AllocHGlobal( Marshal.SizeOf( rec ) );
+            //Marshal.StructureToPtr( rec, this.rec_ptr, false );
 
             Timer TPaint = new Timer();
             TPaint.Interval = 100;
@@ -75,8 +73,12 @@ namespace AnalogTVTest {
             //g.FillRectangle( Brushes.Blue, 0, 0, 100, 100 );
 
             //AnalogTV.analogtv fr = (AnalogTV.analogtv)Marshal.PtrToStructure( this.tv, typeof( AnalogTV.analogtv) );
-            
-            AnalogTV.analogtv_draw( this.tv, 0.04, this.rec_ptr, 1 );
+
+            try {
+                AnalogTV.analogtv_draw( this.tv_ptr, 0.04, this.rec_ptr, 1 );
+            }catch(AccessViolationException ex ) {
+                Debug.WriteLine( ex.Message );
+            }
             //}
         }
     }
