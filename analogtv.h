@@ -13,8 +13,10 @@
 #define _XSCREENSAVER_ANALOGTV_H
 
 #include "thread_util.h"
+#ifdef X11
 #ifdef HAVE_XSHM_EXTENSION
 #include "xshm.h"
+#endif
 #endif
 
 #ifdef WIN32
