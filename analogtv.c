@@ -70,7 +70,7 @@ char* progname = "analogtv";
 # include <windows.h>
 #elif defined HAVE_COCOA
 # include "jwxyz.h"
-#else /* !HAVE_COCOA */
+#elif defined X11
 # include <X11/Xlib.h>
 # include <X11/Xutil.h>
 #endif
@@ -79,7 +79,7 @@ char* progname = "analogtv";
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
-#include "utils.h"
+//#include "utils.h"
 //#include "resources.h"
 #include "analogtv.h"
 #include "yarandom.h"
@@ -265,10 +265,6 @@ analogtv_set_defaults(analogtv *it, char *prefix)
 
 }
 
-#ifndef WIN32
-//extern Bool mono_p; /* shoot me */
-#endif
-
 static void
 analogtv_free_image(analogtv *it)
 {
@@ -277,7 +273,7 @@ analogtv_free_image(analogtv *it)
     DeleteObject(it->image);
 	it->image = NULL;
   }
-#else
+#elif defined X11
   if (it->image) {
     if (it->use_shm) {
 #ifdef HAVE_XSHM_EXTENSION
@@ -302,7 +298,7 @@ analogtv_alloc_image(analogtv *it)
   HDC dpy = GetDC(it->window);
   unsigned bits_per_pixel = GetDeviceCaps(dpy, BITSPIXEL) * GetDeviceCaps(dpy, PLANES);
   unsigned align = thread_memory_alignment(dpy) * 8 - 1;
-#else
+#elif defined X11
   unsigned bits_per_pixel = get_bits_per_pixel(it->dpy, it->xgwa.depth);
   unsigned align = thread_memory_alignment(it->dpy) * 8 - 1;
 #endif
@@ -323,7 +319,7 @@ analogtv_alloc_image(analogtv *it)
 	GetWindowRect(it->window, &windrect);
 	it->image = CreateBitmap(windrect.right - windrect.left, windrect.bottom - windrect.top,
 		GetDeviceCaps(dpy, PLANES), GetDeviceCaps(dpy, BITSPIXEL), NULL);
-#else
+#elif defined X11
     it->image = XCreateImage(it->dpy, it->xgwa.visual, it->xgwa.depth, ZPixmap, 0, 0,
                              it->usewidth, it->useheight, 8, width / 8);
     if (it->image) {
@@ -337,7 +333,7 @@ analogtv_alloc_image(analogtv *it)
 #endif
   }
 
-#ifndef WIN32
+#ifdef X11
   if (it->image) {
     memset (it->image->data, 0, it->image->height * it->image->bytes_per_line);
   } else {
@@ -353,11 +349,7 @@ analogtv_alloc_image(analogtv *it)
 
 
 static void
-#ifdef WIN32
 analogtv_configure(analogtv *it)
-#else
-analogtv_configure(analogtv *it)
-#endif
 {
   int oldwidth=it->usewidth;
   int oldheight=it->useheight;
@@ -386,7 +378,7 @@ analogtv_configure(analogtv *it)
   GetWindowRect(it->window, &windrect);
   hlim = windrect.bottom - windrect.top;
   wlim = windrect.right - windrect.left;
-#else
+#elif defined X11
   hlim = it->xgwa.height;
   wlim = it->xgwa.width;
 #endif
@@ -463,7 +455,7 @@ analogtv_configure(analogtv *it)
 #ifdef WIN32
   it->screen_xo = 0;
   it->screen_yo = 0;
-#else
+#elif defined X11
   it->screen_xo = (it->xgwa.width-it->usewidth)/2;
   it->screen_yo = (it->xgwa.height-it->useheight)/2;
 #endif
@@ -473,7 +465,7 @@ analogtv_configure(analogtv *it)
 void
 analogtv_reconfigure(analogtv *it)
 {
-#ifndef WIN32
+#ifdef X11
 	XGetWindowAttributes(it->dpy, it->window, &it->xgwa);
 #endif
 	analogtv_configure(it);
@@ -504,7 +496,7 @@ static int analogtv_thread_create(void *thread_raw, struct threadpool *threads,
 #ifdef WIN32
   align = thread_memory_alignment(NULL) /
             sizeof(thread->it->signal_subtotals[0]);
-#else
+#elif defined X11
   align = thread_memory_alignment(thread->it->dpy) /
 	  sizeof(thread->it->signal_subtotals[0]);
 #endif
@@ -526,7 +518,7 @@ static void analogtv_thread_destroy(void *thread_raw)
 
 #ifdef WIN32
 PROTO_DLL analogtv *analogtv_allocate(HWND window)
-#else
+#elif defined X11
 analogtv *analogtv_allocate(Display *dpy, Window window)
 #endif
 {
@@ -535,7 +527,7 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
     analogtv_thread_create,
     analogtv_thread_destroy
   };
-#ifndef WIN32
+#ifdef X11
   XGCValues gcv;
 #endif
   analogtv *it = NULL;
@@ -551,7 +543,7 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
   it->signal_subtotals=NULL;
   it->test_five = 5;
 
-#ifndef WIN32
+#ifdef X11
   it->dpy=dpy;
 #endif
   it->window=window;
@@ -569,7 +561,7 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
 #ifdef WIN32
   if (threadpool_create(&it->threads, &cls, hardware_concurrency()))
 	  goto fail;
-#else
+#elif defined X11
   if (threadpool_create(&it->threads, &cls, dpy, hardware_concurrency(dpy)))
     goto fail;
 #endif
@@ -598,7 +590,7 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
   it->blue_shift = it->blue_invprec = -1;
 
   analogtv_configure(it);
-#else
+#elif defined X11
   XGetWindowAttributes(it->dpy, it->window, &it->xgwa);
 
   it->screen = it->xgwa.screen;
@@ -670,7 +662,7 @@ analogtv *analogtv_allocate(Display *dpy, Window window)
                                     "background", "Background");
 */
 
-#ifndef WIN32
+#ifdef X11
   XColor color;
   color.flags = DoRed|DoGreen|DoBlue;
   color.red = color.green = color.blue = 0; /* Black */
@@ -704,7 +696,7 @@ analogtv_release(analogtv *it)
 #ifdef WIN32
     DeleteObject(it->image);
 	it->image = NULL;
-#else
+#elif defined X11
     if (it->use_shm) {
 #ifdef HAVE_XSHM_EXTENSION
       destroy_xshm_image(it->dpy, it->image, &it->shm_info);
@@ -717,7 +709,7 @@ analogtv_release(analogtv *it)
     it->image=NULL;
 #endif
   }
-#ifndef WIN32
+#ifdef X11
   if (it->gc) XFreeGC(it->dpy, it->gc);
   it->gc=NULL;
   if (it->n_colors) XFreeColors(it->dpy, it->colormap, it->colors, it->n_colors, 0L);
@@ -755,7 +747,7 @@ analogtv_release(analogtv *it)
 PROTO_DLL int
 analogtv_set_demod(analogtv *it)
 {
-#ifndef WIN32
+#ifdef X11
   int y_levels=10,i_levels=5,q_levels=5;
 
   /*
@@ -1515,7 +1507,6 @@ analogtv_blast_imagerow(const analogtv *it,
   for (i=0; i<3; i++) level_copyfrom[i]=NULL;
 
 #ifdef WIN32
-  // TESTME
   HDC dpy = GetDC(it->window);
   HDC hdcMem = CreateCompatibleDC(dpy);
   SelectObject(hdcMem, it->image);
@@ -1536,7 +1527,7 @@ analogtv_blast_imagerow(const analogtv *it,
 	  }
   }
   DeleteDC(hdcMem);
-#else
+#elif defined X11
   for (y=ytop; y<ybot; y++) {
     char *rowdata=it->image->data + y*it->image->bytes_per_line;
     unsigned line = y-ytop;
@@ -1765,7 +1756,7 @@ static void analogtv_thread_draw_lines(void *thread_raw)
         while (i<0 && x<it->usewidth) {
 #ifdef WIN32
 		  SetPixelV(hdcMem, x, y, it->colors[0]);
-#else
+#elif defined X11
           XPutPixel(it->image, x, y, it->colors[0]);
 #endif
           i+=pixmultinc;
@@ -1815,15 +1806,15 @@ static void analogtv_thread_draw_lines(void *thread_raw)
 #endif
           for (j=0; j<it->xrepl; j++) {
 #ifdef WIN32
-			SetPixelV(hdcMem, x, y, it->colors[cmi]);
-#else
+            SetPixelV(hdcMem, x, y, it->colors[cmi]);
+#elif defined X11
             XPutPixel(it->image, x, y,
                       it->colors[cmi]);
 #endif
             x++;
           }
 #ifdef WIN32
-		  DeleteDC(hdcMem);
+         DeleteDC(hdcMem);
 #endif
           if (i >= squishright_i) {
             pixmultinc += pixmultinc/squishdiv;
@@ -1837,7 +1828,7 @@ static void analogtv_thread_draw_lines(void *thread_raw)
         while (x<it->usewidth) {
 #ifdef WIN32
 		  SetPixelV(hdcMem, x, y, it->colors[0]);
-#else
+#elif defined X11
           XPutPixel(it->image, x, y, it->colors[0]);
 #endif
           x++;
@@ -2121,7 +2112,7 @@ analogtv_draw(analogtv *it, double noiselevel,
   if (it->need_clear) {
 #ifdef WIN32
 	// XXX
-#else
+#elif defined X11
     XClearWindow(it->dpy, it->window);
 #endif
     it->need_clear=0;
@@ -2150,7 +2141,7 @@ analogtv_draw(analogtv *it, double noiselevel,
 	  rcBmp.bottom = overall_top;
   }
   FillRect(dpy, &rcBmp, hbrBkgnd);
-#else
+#elif defined X11
   if (overall_top>0) {
     XClearArea(it->dpy, it->window,
                it->screen_xo, it->screen_yo,
@@ -2185,7 +2176,7 @@ analogtv_draw(analogtv *it, double noiselevel,
 		DeleteDC(hdcMem);
 
 		ReleaseDC(it->window, dpy);
-#else
+#elif defined X11
       XPutImage(it->dpy, it->window, it->gc, it->image,
                 0, overall_top,
                 it->screen_xo, it->screen_yo+overall_top,
@@ -2243,7 +2234,7 @@ analogtv_reception_allocate(float level, analogtv_input *input)
 PROTO_DLL int
 #ifdef WIN32
 analogtv_load_ximage(analogtv *it, analogtv_input *input, HBITMAP pic_im)
-#else
+#elif defined X11
 analogtv_load_ximage(analogtv *it, analogtv_input *input, XImage *pic_im)
 #endif
 {
@@ -2265,7 +2256,7 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input, XImage *pic_im)
   GetBitmapDimensionEx(pic_im, &idimensions);
   img_w = idimensions.cx;
   img_h = idimensions.cy;
-#else
+#elif defined X11
   img_w=pic_im->width;
   img_h=pic_im->height;
 #endif
@@ -2291,12 +2282,12 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input, XImage *pic_im)
 
 	  DeleteDC(hdcMem);
 	  ReleaseDC(it->window, dpy);
-#else
+#elif defined X11
       col1[x].pixel=XGetPixel(pic_im, picx, picy1);
       col2[x].pixel=XGetPixel(pic_im, picx, picy2);
 #endif
     }
-#ifndef WIN32
+#ifdef X11
     XQueryColors(it->dpy, it->colormap, col1, ANALOGTV_PIC_LEN);
     XQueryColors(it->dpy, it->colormap, col2, ANALOGTV_PIC_LEN);
 #endif
@@ -2463,14 +2454,14 @@ analogtv_reception_update(analogtv_reception *rec)
 void
 #ifdef WIN32
 analogtv_make_font(HWND window, analogtv_font *f,
-#else
+#elif defined X11
 analogtv_make_font(Display *dpy, Window window, analogtv_font *f,
 #endif
                    int w, int h, char *fontname)
 {
 #ifdef WIN32
 	// XXX
-#else
+#elif defined X11
   int i;
   XFontStruct *font;
   Pixmap text_pm;
@@ -2545,7 +2536,7 @@ analogtv_font_pixel(analogtv_font *f, int c, int x, int y)
 #ifdef WIN32
   // XXX
   return 0;
-#else
+#elif defined X11
   return XGetPixel(f->text_im, c*f->char_w + x, y) ? 1 : 0;
 #endif
 }
@@ -2570,7 +2561,7 @@ analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value)
 
   DeleteDC(hdcMem);
   ReleaseDC(it->window, dpy);
-#else
+#elif defined X11
   XPutPixel(f->text_im, c*f->char_w + x, y, value);
 #endif
 }

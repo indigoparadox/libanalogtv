@@ -2,7 +2,7 @@
 #include <stdint.h>
 #ifdef WIN32
 #include <Windows.h>
-#else
+#elif defined X11
 #include <X11/Xlib.h>
 #endif
 #include "analogtv.h"
