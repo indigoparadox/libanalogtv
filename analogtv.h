@@ -346,6 +346,9 @@ PROTO_DLL void analogtv_draw_xpm(analogtv *tv, analogtv_input *input,
 
 PROTO_DLL int analogtv_handle_events (analogtv *it);
 
+PROTO_DLL void
+analogtv_color(int idx, int ntsc[4]);
+
 #ifdef HAVE_XSHM_EXTENSION
 #define ANALOGTV_DEFAULTS_SHM "*useSHM:           True",
 #else

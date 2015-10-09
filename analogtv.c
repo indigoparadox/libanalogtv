@@ -2831,3 +2831,42 @@ analogtv_draw_xpm(analogtv *tv, analogtv_input *input,
     }
   }
 }
+
+PROTO_DLL void
+analogtv_color(int idx, int ntsc[4])
+{
+	double clr_tbl[16][3] = {
+		{ 0,   0,   0 },
+		{ 255, 255, 255 },
+		{ 136,   0,   0 },
+		{ 170, 255, 238 },
+		{ 204,  68, 204 },
+		{ 0, 204,  85 },
+		{ 0,   0, 170 },
+		{ 238, 238, 119 },
+		{ 221, 136,  85 },
+		{ 102,  68,   0 },
+		{ 255, 119, 119 },
+		{ 51,  51,  51 },
+		{ 119, 119, 119 },
+		{ 170, 255, 102 },
+		{ 0, 136, 255 },
+		{ 187, 187, 187 }
+	};
+	int i;
+	int rawy, rawi, rawq;
+	/* RGB conversion taken from analogtv draw xpm */
+	rawy = (5 * clr_tbl[idx][0] + 11 * clr_tbl[idx][1] + 2 * clr_tbl[idx][2]) / 64;
+	rawi = (10 * clr_tbl[idx][0] - 4 * clr_tbl[idx][1] - 5 * clr_tbl[idx][2]) / 64;
+	rawq = (3 * clr_tbl[idx][0] - 8 * clr_tbl[idx][1] + 5 * clr_tbl[idx][2]) / 64;
+
+	ntsc[0] = rawy + rawq;
+	ntsc[1] = rawy - rawi;
+	ntsc[2] = rawy - rawq;
+	ntsc[3] = rawy + rawi;
+
+	for (i = 0; i<4; i++) {
+		if (ntsc[i]>ANALOGTV_WHITE_LEVEL) ntsc[i] = ANALOGTV_WHITE_LEVEL;
+		if (ntsc[i]<ANALOGTV_BLACK_LEVEL) ntsc[i] = ANALOGTV_BLACK_LEVEL;
+	}
+}
