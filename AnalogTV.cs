@@ -353,7 +353,7 @@ namespace libAnalogTV.Interop {
         public static extern IntPtr analogtv_reception_allocate( float level, IntPtr input );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_draw( IntPtr it, double noiselevel, IntPtr recs, uint rec_count );
+        public static extern void analogtv_draw( IntPtr it, double noiselevel, ref IntPtr recs, uint rec_count );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern int analogtv_load_ximage( IntPtr it, IntPtr input, IntPtr pic_im );
