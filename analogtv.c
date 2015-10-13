@@ -115,6 +115,36 @@ do { \
 
 #endif
 
+#ifdef WIN32
+#if 0
+static void bitmap_blit_pixel(HDC hdc, int x, int y, int color) {
+	SetPixelV()
+}
+#else
+#define bitmap_blit_pixel(hdc, x, y, color) \
+	SetPixelV(hdc, x, y, color);
+#endif
+
+#define BM_SIZE_WIDTH(size) \
+	((size & 0xffff0000) >> 16)
+#define BM_SIZE_HEIGHT(size) \
+	(size & 0x0000ffff)
+
+/*
+ * Returns size as two 16-bit numbers.
+ * && 0xff00 = width
+ * && 0x00ff = height
+ */
+static unsigned long long bitmap_get_window_size(HWND window) {
+	RECT windrect;
+	GetWindowRect(window, &windrect);
+	unsigned long long width = windrect.right - windrect.left;
+	width = width << 16;
+	unsigned long long height = ((windrect.bottom - windrect.top) & 0xffff);
+	return width | height;
+}
+
+#endif
 
 #define FASTRND_A 1103515245
 #define FASTRND_C 12345
@@ -319,10 +349,26 @@ analogtv_alloc_image(analogtv *it)
   }
   if (!it->image) {
 #ifdef WIN32
-    RECT windrect;
-    GetWindowRect(it->window, &windrect);
-    it->image = CreateBitmap(windrect.right - windrect.left, windrect.bottom - windrect.top,
-      GetDeviceCaps(dpy, PLANES), GetDeviceCaps(dpy, BITSPIXEL), NULL);
+	
+	/*
+	it->image_size = (windrect.right - windrect.left) * (windrect.bottom - windrect.top) * 3;
+	it->image = calloc(1, sizeof(BITMAPINFO));
+	it->image->bmiHeader.biBitCount = 24;
+	it->image->bmiHeader.biCompression = BI_RGB;
+	it->image->bmiHeader.biWidth = windrect.right - windrect.left;
+	it->image->bmiHeader.biHeight = windrect.bottom - windrect.top;
+	it->image->bmiHeader.biPlanes = GetDeviceCaps(dpy, PLANES);
+	it->image->bmiHeader.biSize = 40;
+	it->image->bmiHeader.biSizeImage = it->image_size;
+
+	SetDIBitsToDevice(hDC, 0, 0, width, height, 0, 0, 0, height, data, &bmpi, DIB_RGB_COLORS);
+	*/
+
+	unsigned long size = bitmap_get_window_size(it->window);
+	unsigned long width = BM_SIZE_WIDTH(size);
+	unsigned long height = BM_SIZE_HEIGHT(size);
+
+	it->image = CreateBitmap(BM_SIZE_WIDTH(size), BM_SIZE_HEIGHT(size), GetDeviceCaps(dpy, PLANES), GetDeviceCaps(dpy, BITSPIXEL), NULL);
 #elif defined X11
     it->image = XCreateImage(it->dpy, it->xgwa.visual, it->xgwa.depth, ZPixmap, 0, 0,
                              it->usewidth, it->useheight, 8, width / 8);
@@ -1536,8 +1582,71 @@ analogtv_blast_imagerow(const analogtv *it,
 
 #ifdef WIN32
   HDC dpy = GetDC(it->window);
+  unsigned size = bitmap_get_window_size(it->window);
+#ifndef BLAST
+
+  BITMAPINFOHEADER bmih;
+  //ZeroMemory(&bmih, sizeof(BITMAPINFOHEADER));
+  bmih.biBitCount = 24;
+  bmih.biCompression = BI_RGB;
+  bmih.biWidth = BM_SIZE_WIDTH(size);
+  bmih.biHeight = 3;
+  bmih.biPlanes = GetDeviceCaps(dpy, PLANES);
+  bmih.biSize = 40;
+  bmih.biSizeImage = BM_SIZE_WIDTH(size) * 3 * 3;
+  bmih.biClrImportant = 0;
+  bmih.biClrUsed = 0;
+
+  BITMAPINFO bmpi;
+  //ZeroMemory(&bmpi, sizeof(BITMAPINFOHEADER));
+  bmpi.bmiHeader = bmih;
+
+  byte *bmdata = calloc(bmih.biSizeImage, sizeof(byte));
   HDC hdcMem = CreateCompatibleDC(dpy);
   SelectObject(hdcMem, it->image);
+  int bmx;
+
+  int width = BM_SIZE_WIDTH(size);
+  i = 0;
+  for (y = ytop; y < ybot; y++) {
+	  unsigned line = y - ytop;
+	  float levelmult = it->leveltable[lineheight][line].value;
+	  for (x = 0, rpf = rgbf; rpf != rgbf_end; x++, rpf += 3) {
+		  int ntscri = rpf[0] * levelmult;
+		  int ntscgi = rpf[1] * levelmult;
+		  int ntscbi = rpf[2] * levelmult;
+		  if (ntscri >= ANALOGTV_CV_MAX) ntscri = ANALOGTV_CV_MAX - 1;
+		  if (ntscgi >= ANALOGTV_CV_MAX) ntscgi = ANALOGTV_CV_MAX - 1;
+		  if (ntscbi >= ANALOGTV_CV_MAX) ntscbi = ANALOGTV_CV_MAX - 1;
+		  /*
+		  for (j = 0; j < xrepl; j++) {
+			  //bitmap_blit_pixel(hdcMem, x*xrepl + j, y, it->red_values[ntscri] | it->green_values[ntscgi] | it->blue_values[ntscbi]);
+		  }
+		  bmdata[i] = 0; // it->red_values[ntscri];
+		  bmdata[i + 1] = 0; // it->green_values[ntscgi];
+		  bmdata[i + 2] = 255; // it->blue_values[ntscbi];
+		  */
+		  bmdata[i] = 5 * it->blue_values[ntscbi];
+		  bmdata[i + 1] = 5 * it->green_values[ntscgi];
+		  bmdata[i + 2] = 5 * it->red_values[ntscri];
+		  i += 3;
+	  }
+  }
+
+  SetDIBitsToDevice(hdcMem, 0, ytop, width, 3, 0, 0, 0, 3, bmdata, &bmpi, DIB_RGB_COLORS);
+  DeleteDC(hdcMem);
+
+  free(bmdata);
+#else
+  //RECT windrect;
+  //GetWindowRect(it->window, &windrect);
+
+  unsigned width = BM_SIZE_WIDTH(size);
+  unsigned height = BM_SIZE_HEIGHT(size);
+
+  HDC hdcMem = CreateCompatibleDC(dpy);
+  SelectObject(hdcMem, it->image);
+
   for (y = ytop; y < ybot; y++) {
 	  unsigned line = y - ytop;
 	  float levelmult = it->leveltable[lineheight][line].value;
@@ -1549,12 +1658,14 @@ analogtv_blast_imagerow(const analogtv *it,
 		  if (ntscgi >= ANALOGTV_CV_MAX) ntscgi = ANALOGTV_CV_MAX - 1;
 		  if (ntscbi >= ANALOGTV_CV_MAX) ntscbi = ANALOGTV_CV_MAX - 1;
 		  for (j = 0; j < xrepl; j++) {
-			  // TODO: Replace with faster operations.
-			  SetPixelV(hdcMem, x*xrepl + j, y, it->red_values[ntscri] | it->green_values[ntscgi] | it->blue_values[ntscbi]);
+			  bitmap_blit_pixel(hdcMem, x*xrepl + j, y, it->red_values[ntscri] | it->green_values[ntscgi] | it->blue_values[ntscbi]);
 		  }
 	  }
   }
+
   DeleteDC(hdcMem);
+#endif
+
 #elif defined X11
   for (y=ytop; y<ybot; y++) {
     char *rowdata=it->image->data + y*it->image->bytes_per_line;
@@ -1779,19 +1890,19 @@ static void analogtv_thread_draw_lines(void *thread_raw)
         i=scanstart_i;
 #ifdef WIN32
 		HDC hdcMem = CreateCompatibleDC(it->image);
-		HBITMAP oldBitmap = SelectObject(hdcMem, it->image);
+		//HBITMAP oldBitmap = SelectObject(hdcMem, it->image);
 #endif
+
+#ifdef X11
         while (i<0 && x<it->usewidth) {
-#ifdef WIN32
-		  SetPixelV(hdcMem, x, y, it->colors[0]);
-#elif defined X11
           XPutPixel(it->image, x, y, it->colors[0]);
-#endif
           i+=pixmultinc;
           x++;
         }
+#endif
+
 #ifdef WIN32
-		DeleteDC(hdcMem);
+		//DeleteDC(hdcMem);
 #endif
 
         while (i<scanend_i && x<it->usewidth) {
@@ -1832,15 +1943,15 @@ static void analogtv_thread_draw_lines(void *thread_raw)
 		  HDC hdcMem = CreateCompatibleDC(it->image);
 		  HBITMAP oldBitmap = SelectObject(hdcMem, it->image);
 #endif
+
+#ifdef X11
           for (j=0; j<it->xrepl; j++) {
-#ifdef WIN32
-            SetPixelV(hdcMem, x, y, it->colors[cmi]);
-#elif defined X11
             XPutPixel(it->image, x, y,
                       it->colors[cmi]);
-#endif
             x++;
           }
+#endif
+
 #ifdef WIN32
          DeleteDC(hdcMem);
 #endif
@@ -1851,16 +1962,20 @@ static void analogtv_thread_draw_lines(void *thread_raw)
         }
 #ifdef WIN32
 		hdcMem = CreateCompatibleDC(it->image);
-		oldBitmap = SelectObject(hdcMem, it->image);
+		SelectObject(hdcMem, it->image);
 #endif
+
+
+
+		//#ifdef WIN32
+//          bitmap_blit_pixel(hdcMem, x, y, it->colors[0]);
+#if defined X11
         while (x<it->usewidth) {
-#ifdef WIN32
-		  SetPixelV(hdcMem, x, y, it->colors[0]);
-#elif defined X11
           XPutPixel(it->image, x, y, it->colors[0]);
+		  x++;
+		}
 #endif
-          x++;
-        }
+
 #ifdef WIN32
 		DeleteDC(hdcMem);
 #endif
@@ -2475,6 +2590,7 @@ analogtv_reception_update(analogtv_reception *rec)
   }
 }
 
+#ifdef ANALOGTV_FONTS
 
 /* jwz: since MacOS doesn't have "6x10", I dumped this font to an XBM...
  */
@@ -2589,7 +2705,7 @@ analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value)
   HDC hdcMem = CreateCompatibleDC(dpy);
   SelectObject(hdcMem, f->text_im);
 
-  SetPixelV(hdcMem, c*f->char_w + x, y, value);
+  bitmap_blit_pixel(hdcMem, c*f->char_w + x, y, value);
 
   DeleteDC(hdcMem);
   ReleaseDC(it->window, dpy);
@@ -2622,6 +2738,8 @@ analogtv_font_set_char(analogtv_font *f, int c, char *s)
     }
   }
 }
+
+#endif
 
 PROTO_DLL void
 analogtv_lcp_to_ntsc(double luma, double chroma, double phase, int ntsc[4])
@@ -2670,6 +2788,7 @@ analogtv_draw_solid_rel_lcp(analogtv_input *input,
   analogtv_draw_solid(input, lefti, righti, topi, boti, ntsc);
 }
 
+#ifdef ANALOGTV_FONTS
 
 PROTO_DLL void
 analogtv_draw_char(analogtv_input *input, analogtv_font *f,
@@ -2716,6 +2835,7 @@ analogtv_draw_string_centered(analogtv_input *input, analogtv_font *f,
   analogtv_draw_string(input, f, s, x, y, ntsc);
 }
 
+#endif
 
 static const char hextonib[128] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

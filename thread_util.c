@@ -81,9 +81,11 @@ Unicore: 1 << 5
 
 #if HAVE_PTHREAD
 
+#ifndef WIN32
 #	if !HAVE_UNISTD_H
 #		error unistd.h must be present whenever pthread.h is.
 #	endif
+#endif
 
 #	if defined __MACH__ && defined __APPLE__ /* OS X, iOS */
 #		include <TargetConditionals.h> /* For TARGET_OS_IPHONE. */
@@ -311,16 +313,20 @@ static void _thread_util_init(BITMAP *dpy)
 
 		if(_has_pthread >= 0)
 		{
+#ifndef WIN32
 			if(get_boolean_resource(dpy, "useThreads", "Boolean"))
 			{
+#endif
 				_cache_line_size = _get_cache_line_size();
 				assert(_cache_line_size >= sizeof(void *));
 				assert(IS_POWER_OF_2(_cache_line_size));
+#ifndef WIN32
 			}
 			else
 			{
 				_has_pthread = -1;
 			}
+#endif
 		}
 	}
 #endif
