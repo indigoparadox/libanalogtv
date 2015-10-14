@@ -6,6 +6,11 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace libAnalogTV.Interop {
+
+    using ANALOGTV_MARSHAL_TYPE_INPUT = AnalogTV.analogtv_input;
+    using ANALOGTV_MARSHAL_TYPE_RECEPTION = AnalogTV.analogtv_reception;
+    using ANALOGTV_MARSHAL_TYPE_TV = AnalogTV.analogtv;
+
     public class AnalogTV {
 
         /* We don't handle interlace here */
@@ -52,8 +57,6 @@ namespace libAnalogTV.Interop {
 
         public const int ANALOGTV_SIGNAL_LEN = ANALOGTV_V * ANALOGTV_H;
 
-#if false
-
         [StructLayout( LayoutKind.Sequential )]
         public struct analogtv_reception {
 
@@ -78,6 +81,22 @@ namespace libAnalogTV.Interop {
             double value;
         }
 
+        public delegate void UpdaterDelegate(IntPtr inp);
+
+        [StructLayout( LayoutKind.Sequential )]
+        public struct analogtv_input {
+            [MarshalAsAttribute( UnmanagedType.ByValArray, SizeConst = (ANALOGTV_V + 1) * ANALOGTV_H )]
+            public char[] signal;
+
+            public int do_teletext;
+
+            /* for client use */
+            public UpdaterDelegate updater;
+            public IntPtr client_data;
+
+            double next_update_time;
+        }
+        
         public delegate void ThreadRunDelegate( IntPtr self );
         public delegate void ThreadDestroyDelegate( IntPtr self );
 
@@ -220,8 +239,6 @@ namespace libAnalogTV.Interop {
             int test_five;
         }
 
-#endif
-
 #if false
         [StructLayout( LayoutKind.Sequential )]
         public struct analogtv {
@@ -326,22 +343,22 @@ namespace libAnalogTV.Interop {
 #endif
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_reconfigure( IntPtr it );
+        public static extern void analogtv_reconfigure( ANALOGTV_MARSHAL_TYPE_TV it );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_set_defaults( IntPtr it, StringBuilder prefix );
+        public static extern void analogtv_set_defaults( ANALOGTV_MARSHAL_TYPE_TV it );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_release( IntPtr it );
+        public static extern void analogtv_release( ANALOGTV_MARSHAL_TYPE_TV it );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern int analogtv_set_demod( IntPtr it );
+        public static extern int analogtv_set_demod( ANALOGTV_MARSHAL_TYPE_TV it );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_setup_frame( IntPtr it );
+        public static extern void analogtv_setup_frame( ANALOGTV_MARSHAL_TYPE_TV it );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_setup_sync( IntPtr input, int do_cb, int do_ssavi );
+        public static extern void analogtv_setup_sync( ANALOGTV_MARSHAL_TYPE_INPUT input, int do_cb, int do_ssavi );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern IntPtr analogtv_allocate( IntPtr window );
@@ -350,19 +367,22 @@ namespace libAnalogTV.Interop {
         public static extern IntPtr analogtv_input_allocate();
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern IntPtr analogtv_reception_allocate( float level, IntPtr input );
+        public static extern ANALOGTV_MARSHAL_TYPE_RECEPTION analogtv_reception_allocate( float level, ANALOGTV_MARSHAL_TYPE_INPUT input );
+        
+        //[DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
+        //public static extern void analogtv_reception_reallocate( IntPtr rec, IntPtr input );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_draw( IntPtr it, double noiselevel, ref IntPtr recs, uint rec_count );
+        public static extern void analogtv_draw( ANALOGTV_MARSHAL_TYPE_TV it, double noiselevel, ref ANALOGTV_MARSHAL_TYPE_RECEPTION recs, uint rec_count );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern int analogtv_load_ximage( IntPtr it, IntPtr input, IntPtr pic_im );
+        public static extern int analogtv_load_ximage( ANALOGTV_MARSHAL_TYPE_TV it, ANALOGTV_MARSHAL_TYPE_INPUT input, IntPtr pic_im );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_reception_update( IntPtr inp );
+        public static extern void analogtv_reception_update( ANALOGTV_MARSHAL_TYPE_RECEPTION inp );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_setup_teletext( IntPtr input );
+        public static extern void analogtv_setup_teletext( ANALOGTV_MARSHAL_TYPE_INPUT input );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern void analogtv_make_font( IntPtr window, IntPtr f, int w, int h, char[] fontname );
@@ -371,10 +391,10 @@ namespace libAnalogTV.Interop {
         public static extern int analogtv_font_pixel( IntPtr f, int c, int x, int y );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_font_set_pixel( IntPtr f, int c, int x, int y, int value, IntPtr it );
+        public static extern void analogtv_font_set_pixel( IntPtr f, int c, int x, int y, int value, ANALOGTV_MARSHAL_TYPE_TV it );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_font_set_char( IntPtr f, int c, char[] s, IntPtr it );
+        public static extern void analogtv_font_set_char( IntPtr f, int c, char[] s, ANALOGTV_MARSHAL_TYPE_TV it );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern void analogtv_lcp_to_ntsc( double luma, double chroma, double phase, int[] ntsc ); // ntsc[4]
@@ -383,25 +403,25 @@ namespace libAnalogTV.Interop {
         public static extern void analogtv_color( int index, int[] ntsc ); // ntsc[4]
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_draw_solid( IntPtr input, int left, int right, int top, int bot, int[] ntsc ); // ntsc[4]
+        public static extern void analogtv_draw_solid( ANALOGTV_MARSHAL_TYPE_INPUT input, int left, int right, int top, int bot, int[] ntsc ); // ntsc[4]
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_draw_solid_rel_lcp( IntPtr input, double left, double right, double top, double bot, double luma, double chroma, double phase );
+        public static extern void analogtv_draw_solid_rel_lcp( ANALOGTV_MARSHAL_TYPE_INPUT input, double left, double right, double top, double bot, double luma, double chroma, double phase );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_draw_char( IntPtr input, IntPtr f, int c, int x, int y, int[] ntsc ); // ntsc[4]
+        public static extern void analogtv_draw_char( ANALOGTV_MARSHAL_TYPE_INPUT input, IntPtr f, int c, int x, int y, int[] ntsc ); // ntsc[4]
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_draw_string( IntPtr input, IntPtr f, char[] s, int x, int y, int[] ntsc ); // ntsc[4]
+        public static extern void analogtv_draw_string( ANALOGTV_MARSHAL_TYPE_INPUT input, IntPtr f, char[] s, int x, int y, int[] ntsc ); // ntsc[4]
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_draw_string_centered( IntPtr input, IntPtr f, char[] s, int x, int y, int[] ntsc ); // ntsc[4]
+        public static extern void analogtv_draw_string_centered( ANALOGTV_MARSHAL_TYPE_INPUT input, IntPtr f, char[] s, int x, int y, int[] ntsc ); // ntsc[4]
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern void analogtv_draw_xpm( IntPtr tv, IntPtr input, char[] xpm, int left, int top );
+        public static extern void analogtv_draw_xpm( ANALOGTV_MARSHAL_TYPE_TV tv, ANALOGTV_MARSHAL_TYPE_INPUT input, char[] xpm, int left, int top );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
-        public static extern int analogtv_handle_events( IntPtr it );
+        public static extern int analogtv_handle_events( ANALOGTV_MARSHAL_TYPE_TV it );
     }
 }
 

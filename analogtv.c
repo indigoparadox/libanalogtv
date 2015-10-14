@@ -248,21 +248,21 @@ analogtv_init(void)
 
 }
 
-void
-analogtv_set_defaults(analogtv *it, char *prefix)
+static void
+analogtv_set_defaults(analogtv *it)
 {
-  char buf[256];
+  //char buf[256];
 
-  sprintf(buf,"%sTVTint",prefix);
+  //sprintf(buf,"%sTVTint",prefix);
   /* it->tint_control = get_float_resource(it->dpy, buf,"TVTint"); */
   it->tint_control = 5.0;
-  sprintf(buf,"%sTVColor",prefix);
+  //sprintf(buf,"%sTVColor",prefix);
   /* it->color_control = get_float_resource(it->dpy, buf,"TVColor")/100.0; */
   it->color_control = 70.0/100.0;
-  sprintf(buf,"%sTVBrightness",prefix);
+  //sprintf(buf,"%sTVBrightness",prefix);
   /* it->brightness_control = get_float_resource(it->dpy, buf,"TVBrightness") / 100.0; */
   it->brightness_control =  2.0 / 100.0;
-  sprintf(buf,"%sTVContrast",prefix);
+  //sprintf(buf,"%sTVContrast",prefix);
   /* it->contrast_control = get_float_resource(it->dpy, buf,"TVContrast") / 100.0; */
   it->contrast_control = 150.0 / 100.0;
   it->height_control = 1.0;
@@ -278,6 +278,7 @@ analogtv_set_defaults(analogtv *it, char *prefix)
   it->squeezebottom=frand(5.0)-1.0;
 
 #ifdef DEBUG
+#ifdef VERBOSE
   printf("analogtv: prefix=%s\n",prefix);
   printf("  use: shm=%d cmap=%d color=%d\n",
          it->use_shm,it->use_cmap,it->use_color);
@@ -313,7 +314,7 @@ analogtv_set_defaults(analogtv *it, char *prefix)
   printf("    ANALOGTV_FP_START=%d\n",ANALOGTV_FP_START);
   printf("    ANALOGTV_PIC_END=%d\n",ANALOGTV_PIC_END);
   printf("    ANALOGTV_HASHNOISE_LEN=%d\n",ANALOGTV_HASHNOISE_LEN);
-
+#endif
 #endif
 
 }
@@ -778,6 +779,8 @@ analogtv *analogtv_allocate()
 #endif
 
   analogtv_configure(it);
+
+  analogtv_set_defaults(it);
 
   return it;
 
@@ -2302,6 +2305,13 @@ analogtv_reception_allocate(float level, analogtv_input *input)
 	ret->multipath = 0.0;
 
 	return ret;
+}
+
+PROTO_DLL void
+analogtv_reception_reallocate(analogtv_reception *rec, analogtv_input *input)
+{
+    free(rec->input);
+    rec->input = input;
 }
 
 /*

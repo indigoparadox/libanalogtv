@@ -187,7 +187,7 @@ int main(void) {
 
    //ya_rand_init(0);
 
-   analogtv_set_defaults( tv, "" );
+   //analogtv_set_defaults( tv, "" );
    analogtv_setup_sync( inp, 1, 0 );
 
    /*
