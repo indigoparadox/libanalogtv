@@ -90,7 +90,7 @@ char* progname = "analogtv";
 #endif
 /* #define DEBUG 1 */
 
-#if defined(DEBUG) && (defined(__linux) || defined(__FreeBSD__))
+#if 0 && defined(DEBUG) && (defined(__linux) || defined(__FreeBSD__))
 /* only works on linux + freebsd */
 #include <machine/cpufunc.h>
 
@@ -2724,9 +2724,34 @@ analogtv_draw_solid(analogtv_input *input,
   if (right-left<4) right=left+4;
   if (bot-top<1) bot=top+1;
 
+#ifdef SAFETY
+  /* TODO: Do safety checks mathematically for performance. */
+  if (ANALOGTV_TOP > top) {
+    top = ANALOGTV_TOP;
+  }
+  if (ANALOGTV_BOT < bot) {
+    bot = ANALOGTV_BOT;
+  }
+  if (ANALOGTV_VIS_START > left) {
+    left = ANALOGTV_VIS_START;
+  }
+  if (ANALOGTV_VIS_END < right) {
+      right = ANALOGTV_VIS_END;
+  }
+#endif
+
   for (y=top; y<bot; y++) {
     for (x=left; x<right; x++) {
-      input->signal[y][x] = ntsc[x&3];
+#if 0
+      if(
+          ANALOGTV_VIS_START <= x && ANALOGTV_TOP <= y &&
+          ANALOGTV_VIS_END > x && ANALOGTV_BOT > y
+      ) {
+#endif
+        input->signal[y][x] = ntsc[x&3];
+#if 0
+      }
+#endif
     }
   }
 }
