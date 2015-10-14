@@ -64,8 +64,8 @@ namespace AnalogTVTest {
                 this.pixels[i] = new int[this.Height];
             }
             
-            this.tvPtr = Marshal.PtrToStructure<AnalogTV.analogtv>( AnalogTV.analogtv_allocate(this.Handle) );
-            this.inputPtr = Marshal.PtrToStructure<AnalogTV.analogtv_input>( AnalogTV.analogtv_input_allocate() );
+            this.tvPtr = (AnalogTV.analogtv)Marshal.PtrToStructure( AnalogTV.analogtv_allocate(this.Handle),typeof(AnalogTV.analogtv) );
+            this.inputPtr = (AnalogTV.analogtv_input)Marshal.PtrToStructure( AnalogTV.analogtv_input_allocate(),typeof(AnalogTV.analogtv_input) );
             //AnalogTV.analogtv_set_defaults( this.tvPtr );
             AnalogTV.analogtv_setup_sync( inputPtr, 1, 0 );
             
