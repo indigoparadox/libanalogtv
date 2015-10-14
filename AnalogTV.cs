@@ -380,6 +380,9 @@ namespace libAnalogTV.Interop {
         public static extern void analogtv_lcp_to_ntsc( double luma, double chroma, double phase, int[] ntsc ); // ntsc[4]
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
+        public static extern void analogtv_color( int index, int[] ntsc ); // ntsc[4]
+
+        [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern void analogtv_draw_solid( IntPtr input, int left, int right, int top, int bot, int[] ntsc ); // ntsc[4]
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
