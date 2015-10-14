@@ -14,6 +14,9 @@
 
 #ifdef X11
 
+#include <stdlib.h>
+#include <stdio.h>
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 

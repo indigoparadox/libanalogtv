@@ -18,6 +18,11 @@ analogtv_reception* reception;
 #define PONG_INC_DEFAULT_X 5
 #define PONG_INC_DEFAULT_Y 5
 
+static int pong_x = 0;
+static int pong_y = 0;
+static int pong_move_inc_x = PONG_INC_DEFAULT_X;
+static int pong_move_inc_y = PONG_INC_DEFAULT_Y;
+
 static void draw_pong(analogtv_input* inp, int x, int y) {
     int field_ntsc[4] = { 0 };
 
@@ -36,6 +41,17 @@ static void draw_pong(analogtv_input* inp, int x, int y) {
         field_ntsc);
 }
 
+static void update_pong() {
+    if (PONG_MAX_X <= pong_x || 0 > pong_x) {
+        pong_move_inc_x *= -1;
+    }
+    if (PONG_MAX_Y <= pong_y || 0 > pong_y) {
+        pong_move_inc_y *= -1;
+    }
+    pong_x += pong_move_inc_x;
+    pong_y += pong_move_inc_y;
+}
+
 #ifdef WIN32
 #define IDT_TIMER_DRAW 10001
 #define IDT_TIMER_PONG 10002
@@ -47,10 +63,6 @@ LRESULT CALLBACK _TVWinProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	PAINTSTRUCT sPaint;
 	HGDIOBJ hfDefault;
 	HWND hWndButton;
-	static int pong_x = 10;
-	static int pong_y = 10;
-    static int pong_move_inc_x = PONG_INC_DEFAULT_X;
-    static int pong_move_inc_y = PONG_INC_DEFAULT_Y;
 
 	switch (msg) {
 	case WM_DESTROY:
@@ -65,14 +77,8 @@ LRESULT CALLBACK _TVWinProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			analogtv_reception_update(reception);
 			analogtv_draw(tv, 0.04, &reception, 1);
 		} else if (IDT_TIMER_PONG == wParam) {
-            if (PONG_MAX_X <= pong_x||0>=pong_x) {
-                pong_move_inc_x *= -1;
-            }
-            if (PONG_MAX_Y <= pong_y || 0 >= pong_y) {
-                pong_move_inc_y *= -1;
-            }
-
-			draw_pong(reception->input, pong_x += pong_move_inc_x, pong_y += pong_move_inc_y);
+            update_pong();
+			draw_pong(reception->input, pong_x, pong_y);
 		}
 		break;
 
@@ -213,9 +219,14 @@ int main(void) {
 	   DispatchMessage(&msg);
    }
 #else
+   //int counter = 0;
    while( 1 ) {
+      //if(0 == )
+      update_pong();
+      draw_pong(reception->input, pong_x, pong_y);
       analogtv_reception_update( reception );
       analogtv_draw( tv, 0.04, &reception, 1 );
+      //counter++;
       /*
       XNextEvent( dpy, &e );
       if( e.type == Expose && e.xexpose.count < 1 ) {

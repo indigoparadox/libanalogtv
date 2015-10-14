@@ -16,7 +16,7 @@
 
 #ifdef X11
 
-#include "utils.h"
+//#include "utils.h"
 //#include "resources.h"  /* for get_string_resource() */
 #include "visual.h"
 
