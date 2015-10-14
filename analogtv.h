@@ -282,11 +282,12 @@ analogtv *analogtv_allocate();
 #endif
 PROTO_DLL analogtv_input *analogtv_input_allocate(void);
 PROTO_DLL analogtv_reception *analogtv_reception_allocate(float level, analogtv_input *input);
+PROTO_DLL void analogtv_reception_reallocate(analogtv_reception *rec, analogtv_input *input);
 
 /* call if window size changes */
 PROTO_DLL void analogtv_reconfigure(analogtv *it);
 
-PROTO_DLL void analogtv_set_defaults(analogtv *it, char *prefix);
+//PROTO_DLL void analogtv_set_defaults(analogtv *it);
 PROTO_DLL void analogtv_release(analogtv *it);
 PROTO_DLL int analogtv_set_demod(analogtv *it);
 PROTO_DLL void analogtv_setup_frame(analogtv *it);

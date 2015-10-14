@@ -20,12 +20,12 @@ namespace AnalogTVTest {
         private static readonly int PONG_MAX_Y = 160;
 
         //private Graphics g;
-        private IntPtr tvPtr;
+        private AnalogTV.analogtv tvPtr;
         //private AnalogTV.analogtv_reception rec;
-        private IntPtr recPtr;
+        private AnalogTV.analogtv_reception recPtr;
         private int[][] pixels;
         private int[] ntsc;
-        private IntPtr inputPtr;
+        private AnalogTV.analogtv_input inputPtr;
 
         private int pongX = 0;
         private int pongY = 0;
@@ -48,10 +48,13 @@ namespace AnalogTVTest {
 
             AnalogTV.analogtv_color( 1, field_ntsc );
 
+            //AnalogTV.analogtv_draw_solid( this.inputPtr,
             AnalogTV.analogtv_draw_solid( this.inputPtr,
                 AnalogTV.ANALOGTV_VIS_START + x, AnalogTV.ANALOGTV_VIS_START + x + PONG_WIDTH,
                 AnalogTV.ANALOGTV_TOP + y, AnalogTV.ANALOGTV_TOP + y + PONG_HEIGHT,
                 field_ntsc );
+
+            //AnalogTV.analogtv_reception_reallocate( this.recPtr, this.inputPtr );
         }
 
         private void Form1_Load( object sender, EventArgs e ) {
@@ -61,9 +64,9 @@ namespace AnalogTVTest {
                 this.pixels[i] = new int[this.Height];
             }
             
-            this.tvPtr = AnalogTV.analogtv_allocate( this.Handle );
-            this.inputPtr = AnalogTV.analogtv_input_allocate();
-            AnalogTV.analogtv_set_defaults( this.tvPtr, new StringBuilder( "" ) );
+            this.tvPtr = Marshal.PtrToStructure<AnalogTV.analogtv>( AnalogTV.analogtv_allocate(this.Handle) );
+            this.inputPtr = Marshal.PtrToStructure<AnalogTV.analogtv_input>( AnalogTV.analogtv_input_allocate() );
+            //AnalogTV.analogtv_set_defaults( this.tvPtr );
             AnalogTV.analogtv_setup_sync( inputPtr, 1, 0 );
             
             //int[] field_ntsc = new int[4] { 0, 0, 0, 0 };
