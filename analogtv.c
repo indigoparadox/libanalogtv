@@ -130,6 +130,8 @@ static void bitmap_blit_pixel(HDC hdc, int x, int y, int color) {
 #define BM_SIZE_HEIGHT(size) \
 	(size & 0x0000ffff)
 
+#define BM_PIXEL_WIDTH 3
+#define BM_PIXEL_DRAW_WIDTH 6
 
 byte *bitmap_blast_data;
 HDC bitmap_blast_hdcMem;
@@ -209,6 +211,8 @@ typedef union {
 static void
 analogtv_init(void)
 {
+  ya_rand_init(725646277);
+
   int i;
   {
     unsigned int localbyteorder_loc = (MSBFirst<<24) | (LSBFirst<<0);
@@ -277,8 +281,8 @@ analogtv_set_defaults(analogtv *it, char *prefix)
          it->horiz_desync, it->flutter_horiz_desync);
   printf("  hashnoise rpm: %g\n",
          it->hashnoise_rpm);
-  printf("  vis: %d %d %d\n",
-         it->visclass, it->visbits, it->visdepth);
+  /* printf("  vis: %d %d %d\n",
+         it->visclass, it->visbits, it->visdepth); */
   printf("  shift: %d-%d %d-%d %d-%d\n",
          it->red_invprec,it->red_shift,
          it->green_invprec,it->green_shift,
@@ -363,7 +367,10 @@ analogtv_alloc_image(analogtv *it)
 
 	it->image = CreateBitmap(BM_SIZE_WIDTH(size), BM_SIZE_HEIGHT(size), GetDeviceCaps(dpy, PLANES), GetDeviceCaps(dpy, BITSPIXEL), NULL);
 
-	bitmap_blast_size = width * 3 * 3;
+	/* SetDIBitsToDevice requires rows to be aligned on a DWORD (4 bytes). */
+	assert(0 == ((width * BM_PIXEL_DRAW_WIDTH) % 4));
+
+	bitmap_blast_size = width * 3 * BM_PIXEL_DRAW_WIDTH;
 	//ZeroMemory(&bmpi, sizeof(BITMAPINFO));
 	//ZeroMemory(&bmih, sizeof(BITMAPINFOHEADER));
 	bitmap_blast_header.biBitCount = 24;
@@ -458,10 +465,12 @@ analogtv_configure(analogtv *it)
       wlim = 266;
       hlim = 200;
 # ifdef DEBUG
+# ifdef X11
       fprintf (stderr,
                "size: minimal: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
                wlim, hlim, it->xgwa.width, it->xgwa.height,
                min_ratio, ratio, max_ratio);
+# endif
 # endif
     }
   else if (ratio > min_ratio && ratio < max_ratio)
@@ -476,20 +485,24 @@ analogtv_configure(analogtv *it)
     {
       wlim = hlim*max_ratio;
 # ifdef DEBUG
+# ifdef X11
       fprintf (stderr,
                "size: center H: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
                wlim, hlim, it->xgwa.width, it->xgwa.height,
                min_ratio, ratio, max_ratio);
+# endif
 # endif
     }
   else /* ratio <= min_ratio */
     {
       hlim = wlim/min_ratio;
 # ifdef DEBUG
+# ifdef X11
       fprintf (stderr,
                "size: center V: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
                wlim, hlim, it->xgwa.width, it->xgwa.height,
                min_ratio, ratio, max_ratio);
+# endif
 # endif
     }
 
@@ -1602,10 +1615,12 @@ analogtv_blast_imagerow(const analogtv *it,
 		  if (ntscri >= ANALOGTV_CV_MAX) ntscri = ANALOGTV_CV_MAX - 1;
 		  if (ntscgi >= ANALOGTV_CV_MAX) ntscgi = ANALOGTV_CV_MAX - 1;
 		  if (ntscbi >= ANALOGTV_CV_MAX) ntscbi = ANALOGTV_CV_MAX - 1;
-		  bitmap_blast_data[i] = 2 * (it->blue_values[ntscbi] >> it->blue_shift);
-		  bitmap_blast_data[i + 1] = 2 * (it->green_values[ntscgi] >> it->green_shift);
-		  bitmap_blast_data[i + 2] = 2 * it->red_values[ntscri];
-		  i += 3;
+		  for (j = 0; j < BM_PIXEL_DRAW_WIDTH; j += BM_PIXEL_WIDTH) {
+			  bitmap_blast_data[i + j] = (it->blue_values[ntscbi] >> it->blue_shift);
+			  bitmap_blast_data[i + j + 1] = (it->green_values[ntscgi] >> it->green_shift);
+			  bitmap_blast_data[i + j + 2] = it->red_values[ntscri];
+		  }
+		  i += BM_PIXEL_DRAW_WIDTH;
 	  }
   }
 
@@ -2239,6 +2254,7 @@ analogtv_draw(analogtv *it, double noiselevel,
   }
 
 #ifdef DEBUG
+#if 0
   if (0) {
     struct timeval tv;
     double fps;
@@ -2253,6 +2269,7 @@ analogtv_draw(analogtv *it, double noiselevel,
 
     it->last_display_time=tv;
   }
+#endif
 #endif
 }
 
@@ -2494,8 +2511,22 @@ analogtv_reception_update(analogtv_reception *rec)
 
   } else {
     for (i=0; i<ANALOGTV_GHOSTFIR_LEN; i++) {
-      rec->ghostfir[i] = (i>=ANALOGTV_GHOSTFIR_LEN/2) ? ((i&1) ? +0.04 : -0.08) /ANALOGTV_GHOSTFIR_LEN
-        : 0.0;
+      if (i >= ANALOGTV_GHOSTFIR_LEN / 2) {
+        /* 
+         * Let's make this a bit more readable/debugable. The original line was:
+         *
+         * rec->ghostfir[i] = ((i & 1) ? +0.04 : -0.08) / ANALOGTV_GHOSTFIR_LEN;
+         */
+        float divisor_addition = 0.0;
+        if (i & 1) {
+          rec->ghostfir[i] = 0.04;
+        } else {
+          rec->ghostfir[i] = -0.08;
+        }
+        rec->ghostfir[i] /= ANALOGTV_GHOSTFIR_LEN;
+      } else {
+        rec->ghostfir[i] = 0.0;
+      }
     }
   }
 }

@@ -6,12 +6,39 @@
 #include <X11/Xlib.h>
 #endif
 #include "analogtv.h"
+#include "yarandom.h"
 
 analogtv* tv;
 analogtv_reception* reception;
 
+#define PONG_WIDTH 30
+#define PONG_HEIGHT 30
+#define PONG_MAX_X 240
+#define PONG_MAX_Y 160
+#define PONG_INC_DEFAULT_X 5
+#define PONG_INC_DEFAULT_Y 5
+
+static void draw_pong(analogtv_input* inp, int x, int y) {
+    int field_ntsc[4] = { 0 };
+
+    analogtv_lcp_to_ntsc(ANALOGTV_BLACK_LEVEL, 0.0, 0.0, field_ntsc);
+
+    analogtv_draw_solid(inp,
+        ANALOGTV_VIS_START, ANALOGTV_VIS_END,
+        ANALOGTV_TOP, ANALOGTV_BOT,
+        field_ntsc);
+
+    analogtv_color(1, field_ntsc);
+
+    analogtv_draw_solid(inp,
+        ANALOGTV_VIS_START + x, ANALOGTV_VIS_START + x + PONG_WIDTH,
+        ANALOGTV_TOP + y, ANALOGTV_TOP + y + PONG_HEIGHT,
+        field_ntsc);
+}
+
 #ifdef WIN32
-#define IDT_TIMER1 10001
+#define IDT_TIMER_DRAW 10001
+#define IDT_TIMER_PONG 10002
 
 HWND win;
 
@@ -20,6 +47,10 @@ LRESULT CALLBACK _TVWinProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	PAINTSTRUCT sPaint;
 	HGDIOBJ hfDefault;
 	HWND hWndButton;
+	static int pong_x = 10;
+	static int pong_y = 10;
+    static int pong_move_inc_x = PONG_INC_DEFAULT_X;
+    static int pong_move_inc_y = PONG_INC_DEFAULT_Y;
 
 	switch (msg) {
 	case WM_DESTROY:
@@ -30,8 +61,19 @@ LRESULT CALLBACK _TVWinProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		break;
 
 	case WM_TIMER:
-		analogtv_reception_update(reception);
-		analogtv_draw(tv, 0.04, &reception, 1);
+		if (IDT_TIMER_DRAW == wParam) {
+			analogtv_reception_update(reception);
+			analogtv_draw(tv, 0.04, &reception, 1);
+		} else if (IDT_TIMER_PONG == wParam) {
+            if (PONG_MAX_X <= pong_x||0>=pong_x) {
+                pong_move_inc_x *= -1;
+            }
+            if (PONG_MAX_Y <= pong_y || 0 >= pong_y) {
+                pong_move_inc_y *= -1;
+            }
+
+			draw_pong(reception->input, pong_x += pong_move_inc_x, pong_y += pong_move_inc_y);
+		}
 		break;
 
 		/*
@@ -77,7 +119,7 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, INT nS
 	win = CreateWindowEx(
 		NULL, "AnalogTVTestClass", "Analog TV",
 		WS_OVERLAPPED | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU,
-		100, 100, 800, 600, NULL, NULL, hInst, NULL
+		100, 100, 576, 400, NULL, NULL, hInst, NULL
 	);
 
 	ShowWindow( win, nShowCmd );
@@ -125,14 +167,15 @@ int main(void) {
    //analogtv_input* inp = calloc( 1, sizeof( analogtv_input ) );
    analogtv_input* inp = analogtv_input_allocate();
    reception = analogtv_reception_allocate(2.0f, inp);
-   int field_ntsc[4] = { 0 };
-   uint8_t pixels[32][32];
+   //uint8_t pixels[32][32];
+   /*
    int x, y;
    for( x = 0 ; x < 32 ; x++ ) {
       for( y = 0 ; y < 32 ; y++ ) {
          pixels[x][y] = 0;
       }
    }
+   */
 
 #ifdef WIN32
    tv = analogtv_allocate( win );
@@ -141,6 +184,8 @@ int main(void) {
 #elif defined ALLEGRO
    tv = analogtv_allocate();
 #endif
+
+   //ya_rand_init(0);
 
    analogtv_set_defaults( tv, "" );
    analogtv_setup_sync( inp, 1, 0 );
@@ -152,19 +197,11 @@ int main(void) {
    reception->multipath = 0.0;
    */
 
-   analogtv_lcp_to_ntsc( ANALOGTV_BLACK_LEVEL, 0.0, 0.0, field_ntsc );
-
-   analogtv_draw_solid( inp,
-                        ANALOGTV_VIS_START, ANALOGTV_VIS_END,
-                        ANALOGTV_TOP, ANALOGTV_BOT,
-                        field_ntsc );
-
-   analogtv_color(10, field_ntsc);
-
-   analogtv_draw_solid(inp, 100, 100, 100, 100, field_ntsc);
+   draw_pong(inp, 10, 10);
 
 #ifdef WIN32
-   SetTimer(win, IDT_TIMER1, 50, (TIMERPROC)NULL);
+   SetTimer(win, IDT_TIMER_DRAW, 50, (TIMERPROC)NULL);
+   SetTimer(win, IDT_TIMER_PONG, 100, (TIMERPROC)NULL);
 
    MSG msg;
 
