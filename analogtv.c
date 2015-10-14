@@ -156,6 +156,15 @@ static unsigned long long bitmap_get_window_size(HWND window) {
 
 #endif
 
+/*
+ * Intensity varies from 1.0 (dark) to 0.1 (light). Default is 0.8.
+ */
+#ifdef WIN32
+#define FLOAT_INTENSITY 0.6
+#else
+#define FLOAT_INTENSITY 0.8
+#endif
+
 #define FASTRND_A 1103515245
 #define FASTRND_C 12345
 #define FASTRND (fastrnd = fastrnd*FASTRND_A+FASTRND_C)
@@ -743,7 +752,7 @@ analogtv *analogtv_allocate()
     }
 
     for (i=0; i<ANALOGTV_CV_MAX; i++) {
-      int intensity=pow(i/256.0, 0.8)*65535.0; /* gamma correction */
+      int intensity=pow(i/256.0, FLOAT_INTENSITY)*65535.0; /* gamma correction */
       if (intensity>65535) intensity=65535;
       it->red_values[i]=((intensity>>it->red_invprec)<<it->red_shift);
       it->green_values[i]=((intensity>>it->green_invprec)<<it->green_shift);
