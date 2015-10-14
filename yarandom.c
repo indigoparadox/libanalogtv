@@ -64,6 +64,10 @@
 #include <sys/time.h> /* for gettimeofday() */
 #endif
 
+#ifdef DEBUG
+#include <assert.h>
+#endif
+
 #include "yarandom.h"
 # undef ya_rand_init
 
@@ -94,9 +98,12 @@ unsigned int
 ya_random (void)
 {
   register int ret = a[i1] + a[i2];
+#ifdef DEBUG
+  assert(0 != ret);
+#endif
   a[i1] = ret;
   if (++i1 >= VectorSize) i1 = 0;
-  if (++i2 >= VectorSize) i2 = 0;
+  if (++i2 >= VectorSize) i2 = 1;
   return ret;
 }
 

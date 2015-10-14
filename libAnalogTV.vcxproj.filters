@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="yarandom.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="aligned_malloc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -30,12 +27,12 @@
     <ClCompile Include="timeval.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="yarandom.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="thread_util.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="yarandom.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="aligned_malloc.h">
@@ -48,6 +45,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="timeval.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="yarandom.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -40,7 +40,7 @@ extern void ya_rand_init (unsigned int);
 #define srandom       __ERROR_do_not_call_srandom_in_xscreensaver__
 #define srand         __ERROR_do_not_call_srand_in_xscreensaver__
 #define srand48       __ERROR_do_not_call_srand48_in_xscreensaver__
-#define ya_rand_init  __ERROR_do_not_call_ya_rand_init_in_xscreensaver__
+//#define ya_rand_init  __ERROR_do_not_call_ya_rand_init_in_xscreensaver__
 
 
 #if defined (__GNUC__) && (__GNUC__ >= 2)
