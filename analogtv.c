@@ -2936,6 +2936,15 @@ analogtv_draw_xpm(analogtv *tv, analogtv_input *input,
     }
   }
 }
+				  
+/*
+  Much of this function was adapted from logo.c
+ */
+PROTO_DLL void
+analogtv_draw_bitmap(analogtv *tv, analogtv_input *input,
+const char * const *xpm, int left, int top) {
+  
+}
 
 PROTO_DLL void
 analogtv_color(int idx, int ntsc[4])
