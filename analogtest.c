@@ -11,13 +11,13 @@
 analogtv* tv;
 analogtv_reception* reception;
 
-#define SCREEN_WIDTH 472
-#define SCREEN_HEIGHT 400
+#define SCREEN_WIDTH 1024
+#define SCREEN_HEIGHT 768
 
 #define PONG_WIDTH 30
-#define PONG_HEIGHT 30
-#define PONG_MAX_X 240
-#define PONG_MAX_Y 160
+#define PONG_HEIGHT 15
+#define PONG_MAX_X 540
+#define PONG_MAX_Y 180
 #define PONG_INC_DEFAULT_X 5
 #define PONG_INC_DEFAULT_Y 5
 
@@ -30,6 +30,8 @@ static void draw_pong(analogtv_input* inp, int x, int y) {
     int field_ntsc[4] = { 0 };
 
     analogtv_lcp_to_ntsc(ANALOGTV_BLACK_LEVEL, 0.0, 0.0, field_ntsc);
+
+    analogtv_color(4, field_ntsc);
 
     analogtv_draw_solid(inp,
         ANALOGTV_VIS_START, ANALOGTV_VIS_END,
