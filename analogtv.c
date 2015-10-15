@@ -115,6 +115,10 @@ do { \
 
 #endif
 
+#ifdef X11
+#define PIXEL_DRAW_WIDTH 2
+#endif
+
 #ifdef WIN32
 #if 0
 static void bitmap_blit_pixel(HDC hdc, int x, int y, int color) {
@@ -1676,15 +1680,17 @@ analogtv_blast_imagerow(const analogtv *it,
           if (ntscri>=ANALOGTV_CV_MAX) ntscri=ANALOGTV_CV_MAX-1;
           if (ntscgi>=ANALOGTV_CV_MAX) ntscgi=ANALOGTV_CV_MAX-1;
           if (ntscbi>=ANALOGTV_CV_MAX) ntscbi=ANALOGTV_CV_MAX-1;
-          pix = (it->red_values[ntscri] |
-                 it->green_values[ntscgi] |
-                 it->blue_values[ntscbi]);
-          pixelptr[0] = pix;
-          if (xrepl>=2) {
-            pixelptr[1] = pix;
-            if (xrepl>=3) pixelptr[2] = pix;
+          for (j = 0; j < PIXEL_DRAW_WIDTH; j += 1) {
+            pix = (it->red_values[ntscri] |
+                   it->green_values[ntscgi] |
+                   it->blue_values[ntscbi]);
+            pixelptr[0] = pix;
+            if (xrepl>=2) {
+              pixelptr[1] = pix;
+              if (xrepl>=3) pixelptr[2] = pix;
+            }
+            pixelptr+=xrepl;
           }
-          pixelptr+=xrepl;
         }
       }
       else if (it->image->format==ZPixmap &&
@@ -2216,8 +2222,8 @@ analogtv_draw(analogtv *it, double noiselevel,
   HBRUSH hbrBkgnd = GetStockObject(BLACK_BRUSH);
   RECT rcBmp;
   if (overall_top>0) {
-	  rcBmp.left = 0;
-	  rcBmp.top = 0;
+	  rcBmp.left = it->screen_xo;
+	  rcBmp.top = it->screen_yo;
 	  rcBmp.right = it->usewidth;
 	  rcBmp.bottom = overall_top;
   }
@@ -2251,7 +2257,7 @@ analogtv_draw(analogtv *it, double noiselevel,
 		SelectObject(hdcMem, it->image);
 
 		GetObject(it->image, sizeof(bitmap), &bitmap);
-		BitBlt(dpy, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcMem, 0, 0, SRCCOPY);
+		BitBlt(dpy, 0, 0, it->usewidth, overall_bot - overall_top, hdcMem, it->screen_xo, overall_top, SRCCOPY);
 
 		DeleteDC(hdcMem);
 
