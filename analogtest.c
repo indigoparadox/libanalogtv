@@ -11,6 +11,9 @@
 analogtv* tv;
 analogtv_reception* reception;
 
+#define SCREEN_WIDTH 472
+#define SCREEN_HEIGHT 400
+
 #define PONG_WIDTH 30
 #define PONG_HEIGHT 30
 #define PONG_MAX_X 240
@@ -125,7 +128,7 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, INT nS
 	win = CreateWindowEx(
 		NULL, "AnalogTVTestClass", "Analog TV",
 		WS_OVERLAPPED | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU,
-		100, 100, 576, 400, NULL, NULL, hInst, NULL
+		100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, NULL, NULL, hInst, NULL
 	);
 
 	ShowWindow( win, nShowCmd );
@@ -151,7 +154,7 @@ int main(void) {
    cmap = DefaultColormap( dpy, scr );
 
    win = XCreateSimpleWindow(
-      dpy, rootwin, 1, 1, 1024, 768, 0,
+      dpy, rootwin, 1, 1, SCREEN_WIDTH, SCREEN_HEIGHT, 0,
       BlackPixel( dpy, scr ),
       BlackPixel( dpy, scr )
    );
