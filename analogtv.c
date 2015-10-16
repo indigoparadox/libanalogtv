@@ -588,6 +588,7 @@ analogtv_reconfigure(analogtv *it)
 {
 #ifdef X11
 	XGetWindowAttributes(it->dpy, it->window, &it->xgwa);
+    XClearArea(it->dpy, it->window, 0, 0, it->xgwa.width, it->xgwa.height, 0);
 #endif
 	analogtv_configure(it);
 }
