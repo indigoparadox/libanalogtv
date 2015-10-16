@@ -221,8 +221,7 @@ typedef struct analogtv_s {
   XImage *image; /* usewidth * useheight */
   GC gc;
 #elif defined WIN32
-  //HBITMAP image;
-  BITMAPINFO* image;
+  HBITMAP image;
   //int image_size;
 #elif defined ALLEGRO
   BITMAP* image;
