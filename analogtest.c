@@ -6,55 +6,66 @@
 #include <X11/Xlib.h>
 #endif
 #include "analogtv.h"
-#include "yarandom.h"
+//#include "yarandom.h"
 
 analogtv* tv;
 analogtv_reception* reception;
 
-#define SCREEN_WIDTH 1024
-#define SCREEN_HEIGHT 768
+enum {
+    SCREEN_WIDTH = 1060,
+    SCREEN_HEIGHT = 790,
+    PONG_WIDTH = 30,
+    PONG_HEIGHT = 15,
+    PONG_MAX_X = (ANALOGTV_VIS_LEN - PONG_WIDTH),
+    PONG_MAX_Y = (ANALOGTV_VISLINES - PONG_HEIGHT),
+    PONG_INC_DEFAULT_X = 5,
+    PONG_INC_DEFAULT_Y = 5,
+    PONG_COUNT = 6,
+};
 
-#define PONG_WIDTH 30
-#define PONG_HEIGHT 15
-#define PONG_MAX_X 540
-#define PONG_MAX_Y 180
-#define PONG_INC_DEFAULT_X 5
-#define PONG_INC_DEFAULT_Y 5
+static int pong_x[PONG_COUNT] = { 0 };
+static int pong_y[PONG_COUNT] = { 0 };
+static int pong_move_inc_x[PONG_COUNT];
+static int pong_move_inc_y[PONG_COUNT];
+static int pong_color[PONG_COUNT];
 
-static int pong_x = 0;
-static int pong_y = 0;
-static int pong_move_inc_x = PONG_INC_DEFAULT_X;
-static int pong_move_inc_y = PONG_INC_DEFAULT_Y;
-
-static void draw_pong(analogtv_input* inp, int x, int y) {
+static void draw_pong(analogtv_input* inp) {
     int field_ntsc[4] = { 0 };
+    //static int count = 0;
+    int i;
 
     analogtv_lcp_to_ntsc(ANALOGTV_BLACK_LEVEL, 0.0, 0.0, field_ntsc);
 
-    analogtv_color(4, field_ntsc);
+    //analogtv_color(count++ % 10, field_ntsc);
+    analogtv_color(ANALOGTV_COLOR_WHITE, field_ntsc);
 
     analogtv_draw_solid(inp,
         ANALOGTV_VIS_START, ANALOGTV_VIS_END,
         ANALOGTV_TOP, ANALOGTV_BOT,
         field_ntsc);
 
-    analogtv_color(1, field_ntsc);
+    for (i = 0; PONG_COUNT > i; i++) {
+        analogtv_color(pong_color[i], field_ntsc);
 
-    analogtv_draw_solid(inp,
-        ANALOGTV_VIS_START + x, ANALOGTV_VIS_START + x + PONG_WIDTH,
-        ANALOGTV_TOP + y, ANALOGTV_TOP + y + PONG_HEIGHT,
-        field_ntsc);
+        analogtv_draw_solid(inp,
+            ANALOGTV_VIS_START + pong_x[i], ANALOGTV_VIS_START + pong_x[i] + PONG_WIDTH,
+            ANALOGTV_TOP + pong_y[i], ANALOGTV_TOP + pong_y[i] + PONG_HEIGHT,
+            field_ntsc);
+    }
 }
 
 static void update_pong() {
-    if (PONG_MAX_X <= pong_x || 0 > pong_x) {
-        pong_move_inc_x *= -1;
+    int i;
+    for (i = 0; PONG_COUNT > i; i++) {
+        if (PONG_MAX_X <= pong_x[i] || 0 > pong_x[i]) {
+            pong_move_inc_x[i] *= -1;
+        }
+        if (PONG_MAX_Y <= pong_y[i] || 0 > pong_y[i]) {
+            pong_move_inc_y[i] *= -1;
+        }
+        pong_x[i] += pong_move_inc_x[i];
+        pong_y[i] += pong_move_inc_y[i];
     }
-    if (PONG_MAX_Y <= pong_y || 0 > pong_y) {
-        pong_move_inc_y *= -1;
-    }
-    pong_x += pong_move_inc_x;
-    pong_y += pong_move_inc_y;
 }
 
 #ifdef WIN32
@@ -83,7 +94,7 @@ LRESULT CALLBACK _TVWinProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			analogtv_draw(tv, 0.04, &reception, 1);
 		} else if (IDT_TIMER_PONG == wParam) {
             update_pong();
-			draw_pong(reception->input, pong_x, pong_y);
+			draw_pong(reception->input);
 		}
 		break;
 
@@ -174,6 +185,16 @@ int main(void) {
 #endif
 #endif
 
+   int i;
+   srand(time(NULL));
+   for (i = 0; PONG_COUNT > i; i++) {
+       pong_x[i] = rand() % (ANALOGTV_VIS_LEN - PONG_WIDTH);
+       pong_y[i] = rand() % (ANALOGTV_VISLINES - PONG_HEIGHT);
+       pong_color[i] = 2 + (rand() % 12);
+       pong_move_inc_x[i] = PONG_INC_DEFAULT_X;
+       pong_move_inc_y[i] = PONG_INC_DEFAULT_Y;
+   }
+
    //reception = calloc( 1, sizeof( analogtv_reception ) );
    //analogtv_input* inp = calloc( 1, sizeof( analogtv_input ) );
    analogtv_input* inp = analogtv_input_allocate();
@@ -208,11 +229,11 @@ int main(void) {
    reception->multipath = 0.0;
    */
 
-   draw_pong(inp, 10, 10);
+   draw_pong(inp);
 
 #ifdef WIN32
-   SetTimer(win, IDT_TIMER_DRAW, 50, (TIMERPROC)NULL);
-   SetTimer(win, IDT_TIMER_PONG, 100, (TIMERPROC)NULL);
+   SetTimer(win, IDT_TIMER_DRAW, 10, (TIMERPROC)NULL);
+   SetTimer(win, IDT_TIMER_PONG, 10, (TIMERPROC)NULL);
 
    MSG msg;
 
@@ -228,7 +249,7 @@ int main(void) {
    while( 1 ) {
       //if(0 == )
       update_pong();
-      draw_pong(reception->input, pong_x, pong_y);
+      draw_pong(reception->input);
       analogtv_reception_update( reception );
       analogtv_draw( tv, 0.04, &reception, 1 );
       //counter++;

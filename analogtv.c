@@ -357,21 +357,28 @@ analogtv_alloc_image(analogtv *it)
   HDC dpy = GetDC(it->window);
   unsigned bits_per_pixel = GetDeviceCaps(dpy, BITSPIXEL) * GetDeviceCaps(dpy, PLANES);
   unsigned align = thread_memory_alignment(dpy) * 8 - 1;
+  unsigned long size = bitmap_get_window_size(it->window);
+  unsigned long screen_width = BM_SIZE_WIDTH(size);
+  unsigned long screen_height = BM_SIZE_HEIGHT(size);
 #elif defined X11
   unsigned bits_per_pixel = get_bits_per_pixel(it->dpy, it->xgwa.depth);
   unsigned align = thread_memory_alignment(it->dpy) * 8 - 1;
+  unsigned screen_width = it->xgwa.width;
+  unsigned screen_height = it->xgwa.height;
 #elif defined ALLEGRO
   unsigned bits_per_pixel = bitmap_color_depth(screen);
   unsigned align = thread_memory_alignment(screen) * 8 - 1;
 #endif
 
-  /* Verify dimension for sanity. */
+  /* The scanlines get wonky and irregular if they are not multiples of 395 (790?) */
+  assert(0 == (screen_height % 395));
 
-  //assert(0 == (it->useheight % 500));
-  assert(4 == ((3 * it->usewidth) / it->useheight));
-
-  it->useheight /= 3;
-  it->useheight *= 3;
+  /* We want to be roughly 4:3 ratio or the image will get wonky. */
+  int width_ratio_ideal = screen_height * 4 / 3;
+  int width_limit_high = width_ratio_ideal + 20;
+  int width_limit_low = width_ratio_ideal - 20;
+  assert(screen_width > width_limit_low);
+  assert(screen_width < width_limit_high);
 
   if (it->use_shm) {
 #ifdef HAVE_XSHM_EXTENSION
@@ -383,16 +390,9 @@ analogtv_alloc_image(analogtv *it)
   }
   if (!it->image) {
 #ifdef WIN32
-    /*
-	unsigned long size = bitmap_get_window_size(it->window);
-	unsigned long width = BM_SIZE_WIDTH(size);
-	unsigned long height = BM_SIZE_HEIGHT(size);
-    */
-    unsigned width = it->useheight * 4 / 3;
+	it->image = CreateBitmap(it->usewidth, it->useheight, GetDeviceCaps(dpy, PLANES), GetDeviceCaps(dpy, BITSPIXEL), NULL);
 
-	it->image = CreateBitmap(width, it->useheight, GetDeviceCaps(dpy, PLANES), GetDeviceCaps(dpy, BITSPIXEL), NULL);
-
-	bitmap_blast_width = width * it->xrepl * BM_PIXEL_WIDTH;
+	bitmap_blast_width = it->usewidth * it->xrepl * BM_PIXEL_WIDTH;
     bitmap_blast_height = 3;
     bitmap_blast_bytes = bitmap_blast_width * bitmap_blast_height * 3 * 3;
 
@@ -403,7 +403,7 @@ analogtv_alloc_image(analogtv *it)
 	//ZeroMemory(&bmih, sizeof(BITMAPINFOHEADER));
 	bitmap_blast_header.biBitCount = 24;
 	bitmap_blast_header.biCompression = BI_RGB;
-	bitmap_blast_header.biWidth = width;
+	bitmap_blast_header.biWidth = it->usewidth;
 	bitmap_blast_header.biHeight = 3;
 	bitmap_blast_header.biPlanes = GetDeviceCaps(dpy, PLANES);
 	bitmap_blast_header.biSize = 40;
@@ -2984,22 +2984,22 @@ PROTO_DLL void
 analogtv_color(int idx, int ntsc[4])
 {
 	double clr_tbl[16][3] = {
-		{ 0,   0,   0 },
-		{ 255, 255, 255 },
-		{ 136,   0,   0 },
-		{ 170, 255, 238 },
-		{ 204,  68, 204 },
-		{ 0, 204,  85 },
-		{ 0,   0, 170 },
-		{ 238, 238, 119 },
-		{ 221, 136,  85 },
-		{ 102,  68,   0 },
-		{ 255, 119, 119 },
-		{ 51,  51,  51 },
-		{ 119, 119, 119 },
-		{ 170, 255, 102 },
-		{ 0, 136, 255 },
-		{ 187, 187, 187 }
+		{ 0,   0,   0 },   /* Black */
+		{ 255, 255, 255 }, /* White */
+		{ 136,   0,   0 }, /* Red */
+		{ 170, 255, 238 }, /* Pale Green */
+		{ 204,  68, 204 }, /* Fuschia */
+		{ 0, 204,  85 },   /* Bright Green */
+		{ 0,   0, 170 },   /* Dark Blue */
+		{ 238, 238, 119 }, /* Yellow */
+		{ 221, 136,  85 }, /* Salmon */
+		{ 102,  68,   0 }, /* Brown */
+		{ 255, 119, 119 }, /* Hot Pink */
+		{ 51,  51,  51 },  /* Very Dark Gray */
+		{ 119, 119, 119 }, /* Dark Gray */
+		{ 170, 255, 102 }, /* Yellow-Green */
+		{ 0, 136, 255 },   /* Cyan */
+		{ 187, 187, 187 }  /* Gray */
 	};
 	int i;
 	int rawy, rawi, rawq;
