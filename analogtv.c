@@ -240,7 +240,7 @@ analogtv_init(void)
 
     float_extraction_works=1;
     for (i=0; i<256*4; i++) {
-      fe.f=float_low8_ofs+(double)i;
+      fe.f=(float)(float_low8_ofs+(double)i);
       ans=fe.i&0x3ff;
       if (ans != i) {
 #ifdef DEBUG
@@ -264,10 +264,10 @@ analogtv_set_defaults(analogtv *it)
   it->tint_control = 5.0;
   //sprintf(buf,"%sTVColor",prefix);
   /* it->color_control = get_float_resource(it->dpy, buf,"TVColor")/100.0; */
-  it->color_control = 70.0/100.0;
+  it->color_control = (float)(70.0/100.0);
   //sprintf(buf,"%sTVBrightness",prefix);
   /* it->brightness_control = get_float_resource(it->dpy, buf,"TVBrightness") / 100.0; */
-  it->brightness_control =  2.0 / 100.0;
+  it->brightness_control = (float)(2.0 / 100.0);
   //sprintf(buf,"%sTVContrast",prefix);
   /* it->contrast_control = get_float_resource(it->dpy, buf,"TVContrast") / 100.0; */
   it->contrast_control = 150.0 / 100.0;
@@ -280,8 +280,8 @@ analogtv_set_defaults(analogtv *it)
   it->hashnoise_on=0;
   it->hashnoise_enable=1;
 
-  it->horiz_desync=frand(10.0)-5.0;
-  it->squeezebottom=frand(5.0)-1.0;
+  it->horiz_desync=(float)(frand(10.0)-5.0);
+  it->squeezebottom=(float)(frand(5.0)-1.0);
 
 #ifdef DEBUG
 #ifdef VERBOSE
@@ -357,28 +357,22 @@ analogtv_alloc_image(analogtv *it)
   HDC dpy = GetDC(it->window);
   unsigned bits_per_pixel = GetDeviceCaps(dpy, BITSPIXEL) * GetDeviceCaps(dpy, PLANES);
   unsigned align = thread_memory_alignment(dpy) * 8 - 1;
-  unsigned long size = bitmap_get_window_size(it->window);
-  unsigned long screen_width = BM_SIZE_WIDTH(size);
-  unsigned long screen_height = BM_SIZE_HEIGHT(size);
+  /*
+  unsigned long long size = bitmap_get_window_size(it->window);
+  unsigned long screen_width = (unsigned long)BM_SIZE_WIDTH(size);
+  unsigned long screen_height = (unsigned long)BM_SIZE_HEIGHT(size);
+  */
 #elif defined X11
   unsigned bits_per_pixel = get_bits_per_pixel(it->dpy, it->xgwa.depth);
   unsigned align = thread_memory_alignment(it->dpy) * 8 - 1;
+  /*
   unsigned screen_width = it->xgwa.width;
   unsigned screen_height = it->xgwa.height;
+  */
 #elif defined ALLEGRO
   unsigned bits_per_pixel = bitmap_color_depth(screen);
   unsigned align = thread_memory_alignment(screen) * 8 - 1;
 #endif
-
-  /* The scanlines get wonky and irregular if they are not multiples of 395 (790?) */
-  assert(0 == (screen_height % 395));
-
-  /* We want to be roughly 4:3 ratio or the image will get wonky. */
-  int width_ratio_ideal = screen_height * 4 / 3;
-  int width_limit_high = width_ratio_ideal + 20;
-  int width_limit_low = width_ratio_ideal - 20;
-  assert(screen_width > width_limit_low);
-  assert(screen_width < width_limit_high);
 
   if (it->use_shm) {
 #ifdef HAVE_XSHM_EXTENSION
@@ -395,9 +389,6 @@ analogtv_alloc_image(analogtv *it)
 	bitmap_blast_width = it->usewidth * it->xrepl * BM_PIXEL_WIDTH;
     bitmap_blast_height = 3;
     bitmap_blast_bytes = bitmap_blast_width * bitmap_blast_height * 3 * 3;
-
-    /* SetDIBitsToDevice requires rows to be aligned on a DWORD (4 bytes). */
-    assert(0 == (bitmap_blast_width % 4));
 
 	//ZeroMemory(&bmpi, sizeof(BITMAPINFO));
 	//ZeroMemory(&bmih, sizeof(BITMAPINFOHEADER));
@@ -465,17 +456,21 @@ analogtv_configure(analogtv *it)
      If it's very close (2.5%) to a multiple of VISLINES, make it exact
      For example, it maps 1024 => 1000.
    */
-  float percent = 0.15;
-  float min_ratio =  4.0 / 3.0 * (1 - percent);
-  float max_ratio = 16.0 / 9.0 * (1 + percent);
+  float percent = 0.15f;
+  float min_ratio = (float)(4.0 / 3.0 * (1 - percent));
+  float max_ratio = (float)(4.0 / 3.0 * (1 + percent));
+  //float max_ratio = 16.0 / 9.0 * (1 + percent);
   float ratio;
-  float height_snap=0.025;
+  float height_snap=0.025f;
 
 #ifdef WIN32
-  RECT windrect;
-  GetWindowRect(it->window, &windrect);
-  int hlim = windrect.bottom - windrect.top;
-  int wlim = windrect.right - windrect.left;
+  unsigned long long size = bitmap_get_window_size(it->window);
+  int wlim = (int)BM_SIZE_WIDTH(size);
+  int hlim = (int)BM_SIZE_HEIGHT(size);
+
+  /* SetDIBitsToDevice requires rows to be aligned on a DWORD (4 bytes). */
+  wlim /= 4;
+  wlim *= 4;
 #elif defined X11
   int hlim = it->xgwa.height;
   int wlim = it->xgwa.width;
@@ -483,7 +478,32 @@ analogtv_configure(analogtv *it)
   int hlim = SCREEN_H;
   int wlim = SCREEN_W;
 #endif
-  ratio = wlim / (float) hlim;
+  int surface_width = wlim;
+  int surface_height = hlim;
+
+#if DEBUG
+  /* The scanlines get wonky and irregular if they are not multiples of 395 (790?) */
+  //assert(0 == (surface_height % 395));
+
+  /* We want to be roughly 4:3 ratio or the image will get wonky. */
+  /*
+  int width_ratio_ideal = surface_height * 4 / 3;
+  int width_limit_high = width_ratio_ideal + 20;
+  int width_limit_low = width_ratio_ideal - 20;
+  */
+  //assert(surface_width > width_limit_low);
+  //assert(surface_width < width_limit_high);
+#endif
+
+  hlim /= ANALOGTV_VISLINES;
+  hlim *= ANALOGTV_VISLINES;
+
+  //hlim /= 4;
+  //hlim *= 4;
+
+  ratio = wlim / (float)hlim;
+
+  /* TODO: Move our constant checks from image_alloc() to here? */
 
 #ifdef USE_IPHONE
   /* Fill the whole iPhone screen, even though that distorts the image. */
@@ -496,12 +516,10 @@ analogtv_configure(analogtv *it)
       wlim = 266;
       hlim = 200;
 # ifdef DEBUG
-# ifdef X11
       fprintf (stderr,
                "size: minimal: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, it->xgwa.width, it->xgwa.height,
+               wlim, hlim, surface_width, surface_height,
                min_ratio, ratio, max_ratio);
-# endif
 # endif
     }
   else if (ratio > min_ratio && ratio < max_ratio)
@@ -514,26 +532,22 @@ analogtv_configure(analogtv *it)
     }
   else if (ratio >= max_ratio)
     {
-      wlim = hlim*max_ratio;
+      wlim = (int)(hlim*max_ratio);
 # ifdef DEBUG
-# ifdef X11
       fprintf (stderr,
                "size: center H: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, it->xgwa.width, it->xgwa.height,
+               wlim, hlim, surface_width, surface_height,
                min_ratio, ratio, max_ratio);
-# endif
 # endif
     }
   else /* ratio <= min_ratio */
     {
-      hlim = wlim/min_ratio;
+      hlim = (int)(wlim/min_ratio);
 # ifdef DEBUG
-# ifdef X11
       fprintf (stderr,
                "size: center V: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, it->xgwa.width, it->xgwa.height,
+               wlim, hlim, surface_width, surface_height,
                min_ratio, ratio, max_ratio);
-# endif
 # endif
     }
 
@@ -563,8 +577,8 @@ analogtv_configure(analogtv *it)
   it->screen_xo = (it->xgwa.width-it->usewidth)/2;
   it->screen_yo = (it->xgwa.height-it->useheight)/2;
 #elif defined WIN32 || defined ALLEGRO
-  it->screen_xo = 0;
-  it->screen_yo = 0;
+  it->screen_xo = (surface_width-it->usewidth)/2;
+  it->screen_yo = (surface_height-it->useheight)/2;
 #endif
   it->need_clear=1;
 }
@@ -774,7 +788,7 @@ analogtv *analogtv_allocate()
     }
 
     for (i=0; i<ANALOGTV_CV_MAX; i++) {
-      int intensity=pow(i/256.0, FLOAT_INTENSITY)*65535.0; /* gamma correction */
+      int intensity=(int)(pow(i/256.0, FLOAT_INTENSITY)*65535.0); /* gamma correction */
       if (intensity>65535) intensity=65535;
       it->red_values[i]=((intensity>>it->red_invprec)<<it->red_shift);
       it->green_values[i]=((intensity>>it->green_invprec)<<it->green_shift);
@@ -952,9 +966,9 @@ analogtv_set_demod(analogtv *it)
       it->cmap_q_levels=q_levels;
     }
   }
+#endif
 
   return 0;
-#endif
 }
 
 #if 0
@@ -1014,7 +1028,7 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
   struct analogtv_yiq_s *yiq;
   int colormode;
   float agclevel=it->agclevel;
-  float brightadd=it->brightness_control*100.0 - ANALOGTV_BLACK_LEVEL;
+  float brightadd= (float)(it->brightness_control*100.0 - ANALOGTV_BLACK_LEVEL);
   float delay[MAXDELAY+ANALOGTV_PIC_LEN], *dp;
   float multiq2[4];
 
@@ -1028,8 +1042,8 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
     colormode = (cb_i * cb_i + cb_q * cb_q) > 2.8;
 
     if (colormode) {
-      multiq2[0] = (cb_i*it->tint_i - cb_q*it->tint_q) * it->color_control;
-      multiq2[1] = (cb_q*it->tint_i + cb_i*it->tint_q) * it->color_control;
+      multiq2[0] = (float)((cb_i*it->tint_i - cb_q*it->tint_q) * it->color_control);
+      multiq2[1] = (float)((cb_q*it->tint_i + cb_i*it->tint_q) * it->color_control);
       multiq2[2]=-multiq2[0];
       multiq2[3]=-multiq2[1];
     }
@@ -1147,10 +1161,10 @@ analogtv_setup_frame(analogtv *it)
 
   if (it->flutter_horiz_desync) {
     /* Horizontal sync during vertical sync instability. */
-    it->horiz_desync += -0.10*(it->horiz_desync-3.0) +
+    it->horiz_desync += (float)(-0.10*(it->horiz_desync-3.0) +
       ((int)(random()&0xff)-0x80) *
       ((int)(random()&0xff)-0x80) *
-      ((int)(random()&0xff)-0x80) * 0.000001;
+      ((int)(random()&0xff)-0x80) * 0.000001);
   }
 
   /* it wasn't used
@@ -1209,7 +1223,7 @@ analogtv_setup_frame(analogtv *it)
 
 
   if (it->rx_signal_level != 0.0)
-    it->agclevel = 1.0/it->rx_signal_level;
+    it->agclevel = (float)(1.0/it->rx_signal_level);
 
 
 #ifdef DEBUG2
@@ -1319,7 +1333,7 @@ analogtv_sync(analogtv *it)
       float cbgain;
 
       for (i=0; i<4; i++) {
-        tot += it->cb_phase[i]*it->cb_phase[i];
+        tot += (float)(it->cb_phase[i]*it->cb_phase[i]);
       }
       cbgain = 32.0f/sqrtf(tot);
 
@@ -1446,7 +1460,7 @@ static void analogtv_init_signal(const analogtv *it, double noiselevel, unsigned
   unsigned int fastrnd=rnd_seek(FASTRND_A, FASTRND_C, it->random0, start);
   unsigned int fastrnd_offset;
   float nm1,nm2;
-  float noisemul = sqrt(noiselevel*150)/(float)0x7fffffff;
+  float noisemul = (float)(sqrt(noiselevel*150)/(float)0x7fffffff);
 
   fastrnd_offset = fastrnd - 0x7fffffff;
   nm1 = (fastrnd_offset <= INT_MAX ? (int)fastrnd_offset : -1 - (int)(UINT_MAX - fastrnd_offset)) * noisemul;
@@ -1470,13 +1484,13 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
   signed char *s=ss + ((start + (unsigned)rec->ofs) % ANALOGTV_SIGNAL_LEN);
   signed char *s2;
   int i;
-  float level=rec->level;
-  float hfloss=rec->hfloss;
+  float level=(float)(rec->level);
+  float hfloss=(float)(rec->hfloss);
   unsigned int fastrnd=rnd_seek(FASTRND_A, FASTRND_C, it->random1, start);
   float dp[5];
 
   const float noise_decay = 0.99995f;
-  float noise_ampl = 1.3f * powf(noise_decay, start);
+  float noise_ampl = (float)(1.3f * powf(noise_decay, (float)start));
 
   if (ec > end)
     ec = end;
@@ -1508,8 +1522,6 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
     if (s>=se) s=ss;
   }
 
-//#ifndef WIN32
-  // XXX
   dp[0]=0.0;
   s2 = s;
   for (i=1; i<5; i++) {
@@ -1518,14 +1530,12 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
       s2 += ANALOGTV_SIGNAL_LEN;
     dp[i] = (float)((int)s2[0]+(int)s2[1]+(int)s2[2]+(int)s2[3]);
   }
-//#endif
 
   assert(p <= pe);
   assert(!((pe - p) % 4));
   while (p != pe) {
     float sig0,sig1,sig2,sig3,sigr;
 
-	// XXX: Crashing in windows.
     sig0=(float)s[0];
     sig1=(float)s[1];
     sig2=(float)s[2];
@@ -1538,8 +1548,8 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
        looks right to me.
     */
 
-    sigr=(dp[1]*rec->ghostfir[0] + dp[2]*rec->ghostfir[1] +
-          dp[3]*rec->ghostfir[2] + dp[4]*rec->ghostfir[3]);
+    sigr=(float)((dp[1]*rec->ghostfir[0] + dp[2]*rec->ghostfir[1] +
+          dp[3]*rec->ghostfir[2] + dp[4]*rec->ghostfir[3]));
     dp[4]=dp[3]; dp[3]=dp[2]; dp[2]=dp[1]; dp[1]=dp[0];
 
     p[0] += (sig0+sigr + sig2*hfloss) * level;
@@ -1635,39 +1645,35 @@ analogtv_blast_imagerow(const analogtv *it,
   for (i=0; i<3; i++) level_copyfrom[i]=NULL;
 
 #ifdef WIN32
-  //unsigned size = bitmap_get_window_size(it->window);
-  //int width = BM_SIZE_WIDTH(size);
   i = 0;
   j = 0;
   int j_pix;
   for (y = ytop; y < ybot; y++) {
 	  unsigned line = y - ytop;
-	  float levelmult = it->leveltable[lineheight][line].value;
+	  float levelmult = (float)(it->leveltable[lineheight][line].value);
 	  for (x = 0, rpf = rgbf; rpf != rgbf_end; x++, rpf += 3) {
-		  int ntscri = rpf[0] * levelmult;
-		  int ntscgi = rpf[1] * levelmult;
-		  int ntscbi = rpf[2] * levelmult;
+          /* Grab the color for this "pixel" from levels. */
+		  int ntscri = (int)(rpf[0] * levelmult);
+		  int ntscgi = (int)(rpf[1] * levelmult);
+		  int ntscbi = (int)(rpf[2] * levelmult);
 		  if (ntscri >= ANALOGTV_CV_MAX) ntscri = ANALOGTV_CV_MAX - 1;
 		  if (ntscgi >= ANALOGTV_CV_MAX) ntscgi = ANALOGTV_CV_MAX - 1;
 		  if (ntscbi >= ANALOGTV_CV_MAX) ntscbi = ANALOGTV_CV_MAX - 1;
-		  for (j = 0; j < xrepl; j += 1) {
+          
+          /* The "pixel" may be multiple real pixels wide, up to xrepl. */
+          for (j = 0; j < xrepl; j += 1) {
             j_pix = j * BM_PIXEL_WIDTH;
             bitmap_blast_data[i + j_pix] = (it->blue_values[ntscbi] >> it->blue_shift);
             bitmap_blast_data[i + j_pix + 1] = (it->green_values[ntscgi] >> it->green_shift);
             bitmap_blast_data[i + j_pix + 2] = it->red_values[ntscri];
-            //BM_BLAST_PIXEL(i);
-            //if (xrepl >= 2) {
-              //BM_BLAST_PIXEL(i + BM_PIXEL_WIDTH);
-            //  if (xrepl >= 3) {
-                //BM_BLAST_PIXEL(i + (2 * BM_PIXEL_WIDTH));
-            //  }
-            //}
 		  }
+
+          /* Move on to the next "pixel". */
           i += (xrepl * BM_PIXEL_WIDTH);
-          //i += 3; // BM_PIXEL_DRAW_WIDTH;
 	  }
   }
 
+  /* Blast this scanline to the buffer. */
   SetDIBitsToDevice(bitmap_blast_hdcMem, 0, ytop, it->usewidth, 3, 0, 0, 0, 3, bitmap_blast_data, &bitmap_blast_info, DIB_RGB_COLORS);
 #elif defined X11
   for (y=ytop; y<ybot; y++) {
@@ -1815,7 +1821,10 @@ static void analogtv_thread_draw_lines(void *thread_raw)
   for (lineno=ANALOGTV_TOP + thread->thread_id;
        lineno<ANALOGTV_BOT;
        lineno += it->threads.count) {
-    int i,j,x,y;
+    int i,x,y;
+#ifndef WIN32
+    int j;
+#endif
 
     int slineno, ytop, ybot;
     unsigned signal_offset;
@@ -1859,12 +1868,12 @@ static void analogtv_thread_draw_lines(void *thread_raw)
 
       scanwidth=it->width_control * puramp(it, 0.5f, 0.3f, 1.0f);
 
-      scw=it->subwidth*scanwidth;
+      scw=(int)(it->subwidth*scanwidth);
       if (scw>it->subwidth) scw=it->usewidth;
-      scl=it->subwidth/2 - scw/2;
-      scr=it->subwidth/2 + scw/2;
+      scl=(int)(it->subwidth/2 - scw/2);
+      scr=(int)(it->subwidth/2 + scw/2);
 
-      pixrate=(int)((viswidth*65536.0f*1.0f)/it->subwidth)/scanwidth;
+      pixrate=(int)((int)((viswidth*65536.0f*1.0f)/it->subwidth)/scanwidth);
       scanstart_i=(int)((middle-viswidth*0.5f)*65536.0f);
       scanend_i=(ANALOGTV_PIC_LEN-1)*65536;
       squishright_i=(int)((middle+viswidth*(0.25f + 0.25f*puramp(it, 2.0f, 0.0f, 1.1f)
@@ -1889,7 +1898,7 @@ static void analogtv_thread_draw_lines(void *thread_raw)
     if (it->use_cmap) {
       for (y=ytop; y<ybot; y++) {
         int level=analogtv_level(it, y, ytop, ybot);
-        float levelmult=analogtv_levelmult(it, level);
+        float levelmult=(float)analogtv_levelmult(it, level);
         float levelmult_y = levelmult * it->contrast_control
           * puramp(it, 1.0f, 0.0f, 1.0f) / (0.5f+0.5f*it->puheight) * 0.070f;
         float levelmult_iq = levelmult * 0.090f;
@@ -2102,15 +2111,15 @@ analogtv_draw(analogtv *it, double noiselevel,
 
   /*bigloadchange=1;
     drawcount=0;*/
-  it->crtload[ANALOGTV_TOP-1]=baseload;
-  it->puheight = puramp(it, 2.0, 1.0, 1.3) * it->height_control *
-    (1.125 - 0.125*puramp(it, 2.0, 2.0, 1.1));
+  it->crtload[ANALOGTV_TOP-1]=(float)baseload;
+  it->puheight = (float)(puramp(it, 2.0f, 1.0f, 1.3f) * it->height_control *
+    (1.125 - 0.125*puramp(it, 2.0f, 2.0f, 1.1f)));
 
   analogtv_setup_levels(it, it->puheight * (double)it->useheight/(double)ANALOGTV_VISLINES);
 
   /* calculate tint once per frame */
-  it->tint_i = -cos((103 + it->tint_control)*3.1415926/180);
-  it->tint_q = sin((103 + it->tint_control)*3.1415926/180);
+  it->tint_i = (float)(-cos((103 + it->tint_control)*3.1415926/180));
+  it->tint_q = (float)sin((103 + it->tint_control)*3.1415926/180);
   
   for (lineno=ANALOGTV_TOP; lineno<ANALOGTV_BOT; lineno++) {
     int slineno, ytop, ybot;
@@ -2199,11 +2208,11 @@ analogtv_draw(analogtv *it, double noiselevel,
       }
 
       totsignal *= it->agclevel;
-      ncl = 0.95f * it->crtload[lineno-1] +
+      ncl = (float)(0.95f * it->crtload[lineno-1] +
         0.05f*(baseload +
                (totsignal-30000)/100000.0f +
                (slineno>184 ? (slineno-184)*(lineno-184)*0.001f * it->squeezebottom
-                : 0.0f));
+                : 0.0f)));
       /*diff=ncl - it->crtload[lineno];*/
       /*bigloadchange = (diff>0.01 || diff<-0.01);*/
       it->crtload[lineno]=ncl;
@@ -2279,13 +2288,15 @@ analogtv_draw(analogtv *it, double noiselevel,
                    False);
 #endif
     } else {
+
+        /* Draw the buffer to the screen. */
 #ifdef WIN32
 		BITMAP bitmap;
 		HDC hdcMem = CreateCompatibleDC(dpy);
 		SelectObject(hdcMem, it->image);
 
 		GetObject(it->image, sizeof(bitmap), &bitmap);
-		BitBlt(dpy, 0, 0, it->usewidth, overall_bot - overall_top, hdcMem, it->screen_xo, overall_top, SRCCOPY);
+		BitBlt(dpy, it->screen_xo, it->screen_yo, it->usewidth, it->useheight, hdcMem, 0, 0, SRCCOPY);
 
 		DeleteDC(hdcMem);
 
@@ -2299,6 +2310,7 @@ analogtv_draw(analogtv *it, double noiselevel,
     }
   }
 
+  /* TODO: Salvage and ifdef this FPS counter. */
 #ifdef DEBUG
 #if 0
   if (0) {
@@ -2418,7 +2430,7 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input, BITMAP *pic_im)
 #endif
 
     for (i=0; i<7; i++) fyx[i]=fyy[i]=0;
-    for (i=0; i<4; i++) fix[i]=fiy[i]=fqx[i]=fqy[i]=0.0;
+    for (i=0; i<4; i++) fix[i]=fiy[i]=fqx[i]=fqy[i]=0;
 
     for (x=0; x<ANALOGTV_PIC_LEN; x++) {
       int rawy,rawi,rawq;
@@ -3004,9 +3016,9 @@ analogtv_color(int idx, int ntsc[4])
 	int i;
 	int rawy, rawi, rawq;
 	/* RGB conversion taken from analogtv draw xpm */
-	rawy = (5 * clr_tbl[idx][0] + 11 * clr_tbl[idx][1] + 2 * clr_tbl[idx][2]) / 64;
-	rawi = (10 * clr_tbl[idx][0] - 4 * clr_tbl[idx][1] - 5 * clr_tbl[idx][2]) / 64;
-	rawq = (3 * clr_tbl[idx][0] - 8 * clr_tbl[idx][1] + 5 * clr_tbl[idx][2]) / 64;
+	rawy = (int)((5 * clr_tbl[idx][0] + 11 * clr_tbl[idx][1] + 2 * clr_tbl[idx][2]) / 64);
+	rawi = (int)((10 * clr_tbl[idx][0] - 4 * clr_tbl[idx][1] - 5 * clr_tbl[idx][2]) / 64);
+	rawq = (int)((3 * clr_tbl[idx][0] - 8 * clr_tbl[idx][1] + 5 * clr_tbl[idx][2]) / 64);
 
 	ntsc[0] = rawy + rawq;
 	ntsc[1] = rawy - rawi;
