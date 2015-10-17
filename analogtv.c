@@ -80,6 +80,7 @@ char* progname = "analogtv";
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 //#include "utils.h"
 //#include "resources.h"
 #include "analogtv.h"
@@ -2878,6 +2879,64 @@ static const char hextonib[128] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
                                    0, 10,11,12,13,14,15,0, 0, 0, 0, 0, 0, 0, 0, 0,
                                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+enum {
+  ANALOGTV_IMAGE_MASK_R = 0xff000000,
+  ANALOGTV_IMAGE_OFFSET_R = 24,
+  ANALOGTV_IMAGE_MASK_G = 0x00ff0000,
+  ANALOGTV_IMAGE_OFFSET_G = 16,
+  ANALOGTV_IMAGE_MASK_B = 0x0000ff00,
+  ANALOGTV_IMAGE_OFFSET_B = 8,
+};
+
+PROTO_DLL void
+analogtv_draw_image(analogtv_input *input, unsigned int *data, int left, int top, unsigned imagew, unsigned imageh) {
+  int x, y, tvx, tvy, i;
+  int rawy, rawi, rawq;
+
+  for (y = 0; y < imageh; y++) {
+    //const unsigned int *line = *iter++;
+    tvy = y + top;
+    if (tvy < ANALOGTV_TOP || tvy >= ANALOGTV_BOT) continue;
+
+    for (x = 0; x < imagew; x++) {
+      //int cbyte = ((unsigned char)line[x]) & 0xff;
+      unsigned int cword = data[(y * imagew) + x];
+      int ntsc[4];
+      tvx = x * 4 + left;
+      if (tvx<ANALOGTV_PIC_START || tvx + 4>ANALOGTV_PIC_END) continue;
+
+      unsigned int rawr = (cword & ANALOGTV_IMAGE_MASK_R) << ANALOGTV_IMAGE_OFFSET_R;
+      unsigned int rawg = (cword & ANALOGTV_IMAGE_MASK_G) << ANALOGTV_IMAGE_OFFSET_G;
+      unsigned int rawb = (cword & ANALOGTV_IMAGE_MASK_B) << ANALOGTV_IMAGE_OFFSET_B;
+
+      /*
+      if (255 == rawr && 255 == rawb) {
+        continue;
+      }
+      */
+
+      rawy = (5 * rawr + 11 * rawg + 2 * rawb) / 64;
+      rawi = (10 * rawr - 4 * rawg - 5 * rawb) / 64;
+      rawq = (3 * rawr - 8 * rawg + 5 * rawb) / 64;
+
+      ntsc[0] = rawy + rawq;
+      ntsc[1] = rawy - rawi;
+      ntsc[2] = rawy - rawq;
+      ntsc[3] = rawy + rawi;
+
+      for (i = 0; i < 4; i++) {
+        if (ntsc[i] > ANALOGTV_WHITE_LEVEL) ntsc[i] = ANALOGTV_WHITE_LEVEL;
+        if (ntsc[i] < ANALOGTV_BLACK_LEVEL) ntsc[i] = ANALOGTV_BLACK_LEVEL;
+      }
+
+      input->signal[tvy][tvx + 0] = ntsc[(tvx + 0) & 3];
+      input->signal[tvy][tvx + 1] = ntsc[(tvx + 1) & 3];
+      input->signal[tvy][tvx + 2] = ntsc[(tvx + 2) & 3];
+      input->signal[tvy][tvx + 3] = ntsc[(tvx + 3) & 3];
+    }
+  }
+}
+
 /*
   Much of this function was adapted from logo.c
  */
@@ -2983,14 +3042,62 @@ analogtv_draw_xpm(analogtv *tv, analogtv_input *input,
     }
   }
 }
-				  
-/*
-  Much of this function was adapted from logo.c
- */
-PROTO_DLL void
-analogtv_draw_bitmap(analogtv *tv, analogtv_input *input,
-const char * const *xpm, int left, int top) {
+
+PROTO_DLL int
+analogtv_load_bitmap(const char *path, unsigned int **image_data, int *w, int *h) {
+  FILE* bitmap;
+  unsigned char bitmap_info[54];
+  unsigned char *bitmap_data;
+  int
+    row,
+    j,
+    col = 0, /* Indexer for output data. */
+    size, size_source_bytes, w_padded;
   
+  assert(4 == sizeof(int));
+
+  bitmap = fopen(path, "rb");
+  if (NULL == bitmap) {
+    return 1;
+  }
+
+  //fseek(bitmap, 0, SEEK_SET);
+  fread(bitmap_info, sizeof(unsigned char), 54, bitmap);
+  *w = *(int*)&bitmap_info[18];
+  *h = *(int*)&bitmap_info[22];
+
+  /* Calculate bitmap row padding. */
+  w_padded = ((*w) * 3 + 3) & (~3);
+
+  size = (*w) * (*h);
+  size_source_bytes = size*3; /* 3 Colors */
+
+  bitmap_data = calloc(w_padded, sizeof(unsigned char));
+
+  *image_data = calloc(size, sizeof(unsigned));
+
+  for (row = 0; (*h)>row; row++) {
+    fread(bitmap_data, sizeof(unsigned char), w_padded, bitmap);
+    for (j = 0, col = 0; ((*w) * 3) > j; j += 3, col++) {
+      
+      //int j = i * 3;
+      
+      unsigned pixel = 0;
+      pixel |= bitmap_data[j + 2];
+      pixel = pixel << 8;
+      pixel |= bitmap_data[j];
+      pixel = pixel << 8;
+      pixel |= bitmap_data[j + 1];
+      pixel = pixel << 8;
+
+      /* Start from the bottom row. */
+      int out_index = (((*h) - (row + 1)) * (*w)) + col;
+
+      (*image_data)[out_index] = pixel;
+    }
+  }
+
+  return 0;
 }
 
 PROTO_DLL void

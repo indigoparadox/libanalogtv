@@ -312,6 +312,9 @@ PROTO_DLL void analogtv_setup_frame(analogtv *it);
 PROTO_DLL void analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi);
 PROTO_DLL void analogtv_draw(analogtv *it, double noiselevel, const analogtv_reception *const *recs, unsigned rec_count);
 
+
+PROTO_DLL int
+analogtv_load_bitmap(const char *path, unsigned int **image_data, int *w, int *h);
 #ifdef WIN32
 PROTO_DLL int analogtv_load_ximage(analogtv *it, analogtv_input *input, HBITMAP pic_im);
 #elif defined X11
@@ -364,6 +367,8 @@ PROTO_DLL void analogtv_draw_string_centered(analogtv_input *input, analogtv_fon
                                    char *s, int x, int y, int ntsc[4]);
 PROTO_DLL void analogtv_draw_xpm(analogtv *tv, analogtv_input *input,
                        const char * const *xpm, int left, int top);
+PROTO_DLL void analogtv_draw_image(analogtv_input *input, unsigned int *data,
+  int left, int top, unsigned imagew, unsigned imageh);
 
 PROTO_DLL int analogtv_handle_events (analogtv *it);
 
