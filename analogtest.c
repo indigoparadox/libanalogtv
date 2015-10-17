@@ -18,9 +18,9 @@ enum {
     PONG_HEIGHT = 15,
     PONG_MAX_X = (ANALOGTV_VIS_LEN - PONG_WIDTH),
     PONG_MAX_Y = (ANALOGTV_VISLINES - PONG_HEIGHT),
-    PONG_INC_DEFAULT_X = 5,
-    PONG_INC_DEFAULT_Y = 5,
-    PONG_COUNT = 6,
+    PONG_INC_DEFAULT_X = 0,
+    PONG_INC_DEFAULT_Y = 0,
+    PONG_COUNT = 1,
     UPDATE_USEC = 10,
 };
 
@@ -29,6 +29,9 @@ static int pong_y[PONG_COUNT] = { 0 };
 static int pong_move_inc_x[PONG_COUNT];
 static int pong_move_inc_y[PONG_COUNT];
 static int pong_color[PONG_COUNT];
+static unsigned int *image;
+static int image_w;
+static int image_h;
 
 static void draw_pong(analogtv_input* inp) {
     int field_ntsc[4] = { 0 };
@@ -47,10 +50,15 @@ static void draw_pong(analogtv_input* inp) {
     for (i = 0; PONG_COUNT > i; i++) {
         analogtv_color(pong_color[i], field_ntsc);
 
-        analogtv_draw_solid(inp,
+        if (0 == i) {
+          analogtv_draw_image(inp, image, ANALOGTV_VIS_START + pong_x[i],
+            ANALOGTV_TOP + pong_y[i], image_w, image_h);
+        } else {
+          analogtv_draw_solid(inp,
             ANALOGTV_VIS_START + pong_x[i], ANALOGTV_VIS_START + pong_x[i] + PONG_WIDTH,
             ANALOGTV_TOP + pong_y[i], ANALOGTV_TOP + pong_y[i] + PONG_HEIGHT,
             field_ntsc);
+        }
     }
 }
 
@@ -88,7 +96,7 @@ LRESULT CALLBACK _TVWinProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			    analogtv_reception_update(reception);
 			    analogtv_draw(tv, 0.04, &reception, 1);
 		    } else if (IDT_TIMER_PONG == wParam) {
-                update_pong();
+          update_pong();
 			    draw_pong(reception->input);
 		    }
 		    break;
@@ -180,6 +188,10 @@ int main(void) {
 #endif
 #endif
 
+   if (analogtv_load_bitmap("test24.bmp", &image, &image_w, &image_h)) {
+     return 1;
+   }
+
    int i;
    srand( (unsigned)time( NULL ) );
    for (i = 0; PONG_COUNT > i; i++) {
@@ -223,7 +235,6 @@ int main(void) {
 #else
    //int counter = 0;
    while( 1 ) {
-      //if(0 == )
       update_pong();
       draw_pong( reception->input );
       analogtv_reception_update( reception );
