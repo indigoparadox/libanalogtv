@@ -14,15 +14,9 @@ analogtv_reception* reception = NULL;
 enum {
     SCREEN_WIDTH = 1060,
     SCREEN_HEIGHT = 768,
-    PONG_WIDTH = 30,
-    PONG_HEIGHT = 15,
-    /*
-    PONG_MAX_X = (ANALOGTV_VIS_LEN - PONG_WIDTH),
-    PONG_MAX_Y = (ANALOGTV_VISLINES - PONG_HEIGHT),
-    */
-    PONG_INC_DEFAULT_X = 0,
-    PONG_INC_DEFAULT_Y = 0,
-    PONG_COUNT = 1,
+    PONG_INC_DEFAULT_X = 2,
+    PONG_INC_DEFAULT_Y = 2,
+    PONG_COUNT = 5,
     UPDATE_USEC = 10,
 };
 
@@ -54,13 +48,14 @@ static void draw_pong(analogtv_input* inp) {
     for (i = 0; PONG_COUNT > i; i++) {
         analogtv_color(pong_color[i], field_ntsc);
 
-        if (0 == i) {
+        if ((PONG_COUNT - 1) == i) {
+          /* Draw the image on top of the rest. */
           analogtv_draw_image(inp, image, ANALOGTV_VIS_START + pong_x[i],
             ANALOGTV_TOP + pong_y[i], image_w, image_h);
         } else {
           analogtv_draw_solid(inp,
-            ANALOGTV_VIS_START + pong_x[i], ANALOGTV_VIS_START + pong_x[i] + PONG_WIDTH,
-            ANALOGTV_TOP + pong_y[i], ANALOGTV_TOP + pong_y[i] + PONG_HEIGHT,
+            ANALOGTV_VIS_START + pong_x[i], ANALOGTV_VIS_START + pong_x[i] + (image_w * 4),
+            ANALOGTV_TOP + pong_y[i], ANALOGTV_TOP + pong_y[i] + image_h,
             field_ntsc);
         }
     }
@@ -199,7 +194,7 @@ int main(void) {
    int i;
    srand( (unsigned)time( NULL ) );
    for (i = 0; PONG_COUNT > i; i++) {
-       pong_max_x[i] = ANALOGTV_VIS_LEN - image_w;
+       pong_max_x[i] = ANALOGTV_VIS_LEN - (image_w * 4);
        pong_max_y[i] = ANALOGTV_VISLINES - image_h;
        pong_x[i] = rand() % pong_max_x[i];
        pong_y[i] = rand() % pong_max_y[i];
