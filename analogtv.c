@@ -2888,13 +2888,18 @@ enum {
   ANALOGTV_IMAGE_OFFSET_B = 8,
 };
 
+/*
+ * data should be a pointer to an array of unsigned ints sized as
+ * width * height. The image will be drawn line by line from the top down,
+ * with each int being used as 0xrrggbb00. This provides a common format to
+ * to translate other images to.
+ */
 PROTO_DLL void
 analogtv_draw_image(analogtv_input *input, unsigned int *data, int left, int top, unsigned imagew, unsigned imageh) {
   int x, y, tvx, tvy, i;
   int rawy, rawi, rawq;
 
   for (y = 0; y < imageh; y++) {
-    //const unsigned int *line = *iter++;
     tvy = y + top;
     if (tvy < ANALOGTV_TOP || tvy >= ANALOGTV_BOT) continue;
 
@@ -2903,17 +2908,14 @@ analogtv_draw_image(analogtv_input *input, unsigned int *data, int left, int top
       unsigned int cword = data[(y * imagew) + x];
       int ntsc[4];
       tvx = x * 4 + left;
+
+      /* Only draw columns inside of the visible range. */
       if (tvx<ANALOGTV_VIS_START || tvx + 4>ANALOGTV_VIS_END) continue;
 
+      /* Extract each column pixel and translate it into NTSC color. */
       unsigned int rawr = (cword & ANALOGTV_IMAGE_MASK_R) >> ANALOGTV_IMAGE_OFFSET_R;
       unsigned int rawg = (cword & ANALOGTV_IMAGE_MASK_G) >> ANALOGTV_IMAGE_OFFSET_G;
       unsigned int rawb = (cword & ANALOGTV_IMAGE_MASK_B) >> ANALOGTV_IMAGE_OFFSET_B;
-
-      /*
-      if (255 == rawr && 255 == rawb) {
-        continue;
-      }
-      */
 
       rawy = (5 * rawr + 11 * rawg + 2 * rawb) / 64;
       rawi = (10 * rawr - 4 * rawg - 5 * rawb) / 64;
@@ -2929,7 +2931,7 @@ analogtv_draw_image(analogtv_input *input, unsigned int *data, int left, int top
         if (ntsc[i] < ANALOGTV_BLACK_LEVEL) ntsc[i] = ANALOGTV_BLACK_LEVEL;
       }
 
-      /* TODO: Make sure we don't draw out of bounds. */
+      /* Draw the image into the signal array. */
       input->signal[tvy][tvx + 0] = ntsc[(tvx + 0) & 3];
       input->signal[tvy][tvx + 1] = ntsc[(tvx + 1) & 3];
       input->signal[tvy][tvx + 2] = ntsc[(tvx + 2) & 3];
@@ -3062,7 +3064,6 @@ analogtv_load_bitmap(const char *path, unsigned int **image_data, int *w, int *h
     return 1;
   }
 
-  //fseek(bitmap, 0, SEEK_SET);
   fread(bitmap_info, sizeof(unsigned char), 54, bitmap);
   *w = *(int*)&bitmap_info[18];
   *h = *(int*)&bitmap_info[22];
@@ -3080,17 +3081,11 @@ analogtv_load_bitmap(const char *path, unsigned int **image_data, int *w, int *h
   for (row = 0; (*h)>row; row++) {
     fread(bitmap_data, sizeof(unsigned char), w_padded, bitmap);
     for (j = 0, col = 0; ((*w) * 3) > j; j += 3, col++) {
-      
-      //int j = i * 3;
 
       unsigned pixel = 0;
       unsigned char *in_pixel_b = (unsigned*)(&bitmap_data[j]);
       unsigned char *in_pixel_g = (unsigned*)(&bitmap_data[j + 1]);
       unsigned char *in_pixel_r = (unsigned*)(&bitmap_data[j + 2]);
-      
-      if (0!=*in_pixel_g){
-        printf(" foo\n");
-      }
 
       pixel |= *in_pixel_r;
       pixel = pixel << 8;
@@ -3107,6 +3102,8 @@ analogtv_load_bitmap(const char *path, unsigned int **image_data, int *w, int *h
       out_index = out_index;
     }
   }
+
+  fclose(bitmap);
 
   return 0;
 }
