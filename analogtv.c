@@ -2903,11 +2903,11 @@ analogtv_draw_image(analogtv_input *input, unsigned int *data, int left, int top
       unsigned int cword = data[(y * imagew) + x];
       int ntsc[4];
       tvx = x * 4 + left;
-      if (tvx<ANALOGTV_PIC_START || tvx + 4>ANALOGTV_PIC_END) continue;
+      if (tvx<ANALOGTV_VIS_START || tvx + 4>ANALOGTV_VIS_END) continue;
 
-      unsigned int rawr = (cword & ANALOGTV_IMAGE_MASK_R) << ANALOGTV_IMAGE_OFFSET_R;
-      unsigned int rawg = (cword & ANALOGTV_IMAGE_MASK_G) << ANALOGTV_IMAGE_OFFSET_G;
-      unsigned int rawb = (cword & ANALOGTV_IMAGE_MASK_B) << ANALOGTV_IMAGE_OFFSET_B;
+      unsigned int rawr = (cword & ANALOGTV_IMAGE_MASK_R) >> ANALOGTV_IMAGE_OFFSET_R;
+      unsigned int rawg = (cword & ANALOGTV_IMAGE_MASK_G) >> ANALOGTV_IMAGE_OFFSET_G;
+      unsigned int rawb = (cword & ANALOGTV_IMAGE_MASK_B) >> ANALOGTV_IMAGE_OFFSET_B;
 
       /*
       if (255 == rawr && 255 == rawb) {
@@ -2929,6 +2929,7 @@ analogtv_draw_image(analogtv_input *input, unsigned int *data, int left, int top
         if (ntsc[i] < ANALOGTV_BLACK_LEVEL) ntsc[i] = ANALOGTV_BLACK_LEVEL;
       }
 
+      /* TODO: Make sure we don't draw out of bounds. */
       input->signal[tvy][tvx + 0] = ntsc[(tvx + 0) & 3];
       input->signal[tvy][tvx + 1] = ntsc[(tvx + 1) & 3];
       input->signal[tvy][tvx + 2] = ntsc[(tvx + 2) & 3];
@@ -3081,19 +3082,29 @@ analogtv_load_bitmap(const char *path, unsigned int **image_data, int *w, int *h
     for (j = 0, col = 0; ((*w) * 3) > j; j += 3, col++) {
       
       //int j = i * 3;
-      
+
       unsigned pixel = 0;
-      pixel |= bitmap_data[j + 2];
+      unsigned char *in_pixel_b = (unsigned*)(&bitmap_data[j]);
+      unsigned char *in_pixel_g = (unsigned*)(&bitmap_data[j + 1]);
+      unsigned char *in_pixel_r = (unsigned*)(&bitmap_data[j + 2]);
+      
+      if (0!=*in_pixel_g){
+        printf(" foo\n");
+      }
+
+      pixel |= *in_pixel_r;
       pixel = pixel << 8;
-      pixel |= bitmap_data[j];
+      pixel |= *in_pixel_g;
       pixel = pixel << 8;
-      pixel |= bitmap_data[j + 1];
+      pixel |= *in_pixel_b;
       pixel = pixel << 8;
 
       /* Start from the bottom row. */
       int out_index = (((*h) - (row + 1)) * (*w)) + col;
 
       (*image_data)[out_index] = pixel;
+
+      out_index = out_index;
     }
   }
 
