@@ -16,8 +16,10 @@ enum {
     SCREEN_HEIGHT = 768,
     PONG_WIDTH = 30,
     PONG_HEIGHT = 15,
+    /*
     PONG_MAX_X = (ANALOGTV_VIS_LEN - PONG_WIDTH),
     PONG_MAX_Y = (ANALOGTV_VISLINES - PONG_HEIGHT),
+    */
     PONG_INC_DEFAULT_X = 0,
     PONG_INC_DEFAULT_Y = 0,
     PONG_COUNT = 1,
@@ -32,6 +34,8 @@ static int pong_color[PONG_COUNT];
 static unsigned int *image;
 static int image_w;
 static int image_h;
+static int pong_max_x[PONG_COUNT];
+static int pong_max_y[PONG_COUNT];
 
 static void draw_pong(analogtv_input* inp) {
     int field_ntsc[4] = { 0 };
@@ -65,10 +69,10 @@ static void draw_pong(analogtv_input* inp) {
 static void update_pong() {
     int i;
     for (i = 0; PONG_COUNT > i; i++) {
-        if (PONG_MAX_X <= pong_x[i] || 0 > pong_x[i]) {
+        if (pong_max_x[i] <= pong_x[i] || 0 > pong_x[i]) {
             pong_move_inc_x[i] *= -1;
         }
-        if (PONG_MAX_Y <= pong_y[i] || 0 > pong_y[i]) {
+        if (pong_max_y[i] <= pong_y[i] || 0 > pong_y[i]) {
             pong_move_inc_y[i] *= -1;
         }
         pong_x[i] += pong_move_inc_x[i];
@@ -195,8 +199,10 @@ int main(void) {
    int i;
    srand( (unsigned)time( NULL ) );
    for (i = 0; PONG_COUNT > i; i++) {
-       pong_x[i] = rand() % (ANALOGTV_VIS_LEN - PONG_WIDTH);
-       pong_y[i] = rand() % (ANALOGTV_VISLINES - PONG_HEIGHT);
+       pong_max_x[i] = ANALOGTV_VIS_LEN - image_w;
+       pong_max_y[i] = ANALOGTV_VISLINES - image_h;
+       pong_x[i] = rand() % pong_max_x[i];
+       pong_y[i] = rand() % pong_max_y[i];
        pong_color[i] = 2 + (rand() % 12);
        pong_move_inc_x[i] = PONG_INC_DEFAULT_X;
        pong_move_inc_y[i] = PONG_INC_DEFAULT_Y;
