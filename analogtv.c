@@ -437,6 +437,12 @@ analogtv_alloc_image(analogtv *it)
 #endif
 }
 
+PROTO_DLL void
+analogtv_free_imagefile(unsigned *data) {
+  if (NULL != data) {
+    free(data);
+  }
+}
 
 static void
 analogtv_configure(analogtv *it)
