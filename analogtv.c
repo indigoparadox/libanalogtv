@@ -2917,6 +2917,11 @@ analogtv_draw_image(analogtv_input *input, unsigned int *data, int left, int top
       unsigned int rawg = (cword & ANALOGTV_IMAGE_MASK_G) >> ANALOGTV_IMAGE_OFFSET_G;
       unsigned int rawb = (cword & ANALOGTV_IMAGE_MASK_B) >> ANALOGTV_IMAGE_OFFSET_B;
 
+      if (0 != rawg && rawg != rawb){
+        printf("goo");
+      }
+
+#if 0
       rawy = (5 * rawr + 11 * rawg + 2 * rawb) / 64;
       rawi = (10 * rawr - 4 * rawg - 5 * rawb) / 64;
       rawq = (3 * rawr - 8 * rawg + 5 * rawb) / 64;
@@ -2930,6 +2935,9 @@ analogtv_draw_image(analogtv_input *input, unsigned int *data, int left, int top
         if (ntsc[i] > ANALOGTV_WHITE_LEVEL) ntsc[i] = ANALOGTV_WHITE_LEVEL;
         if (ntsc[i] < ANALOGTV_BLACK_LEVEL) ntsc[i] = ANALOGTV_BLACK_LEVEL;
       }
+#endif
+
+      analogtv_rgb_to_ntsc(rawr, rawg, rawb, ntsc);
 
       /* Draw the image into the signal array. */
       input->signal[tvy][tvx + 0] = ntsc[(tvx + 0) & 3];
@@ -3024,6 +3032,7 @@ analogtv_draw_xpm(analogtv *tv, analogtv_input *input,
       tvx=x*4+left;
       if (tvx<ANALOGTV_PIC_START || tvx+4>ANALOGTV_PIC_END) continue;
 
+      /*
       rawy=( 5*cmap[cbyte].r + 11*cmap[cbyte].g + 2*cmap[cbyte].b) / 64;
       rawi=(10*cmap[cbyte].r -  4*cmap[cbyte].g - 5*cmap[cbyte].b) / 64;
       rawq=( 3*cmap[cbyte].r -  8*cmap[cbyte].g + 5*cmap[cbyte].b) / 64;
@@ -3037,6 +3046,9 @@ analogtv_draw_xpm(analogtv *tv, analogtv_input *input,
         if (ntsc[i]>ANALOGTV_WHITE_LEVEL) ntsc[i]=ANALOGTV_WHITE_LEVEL;
         if (ntsc[i]<ANALOGTV_BLACK_LEVEL) ntsc[i]=ANALOGTV_BLACK_LEVEL;
       }
+      */
+
+      analogtv_rgb_to_ntsc(cmap[cbyte].r, cmap[cbyte].g, cmap[cbyte].b, ntsc);
 
       input->signal[tvy][tvx+0]= ntsc[(tvx+0)&3];
       input->signal[tvy][tvx+1]= ntsc[(tvx+1)&3];
@@ -3129,10 +3141,12 @@ analogtv_color(int idx, int ntsc[4])
 		{ 0, 136, 255 },   /* Cyan */
 		{ 187, 187, 187 }  /* Gray */
 	};
+
+  /*
 	int i;
 	int rawy, rawi, rawq;
-	/* RGB conversion taken from analogtv draw xpm */
-	rawy = (int)((5 * clr_tbl[idx][0] + 11 * clr_tbl[idx][1] + 2 * clr_tbl[idx][2]) / 64);
+	
+  rawy = (int)((5 * clr_tbl[idx][0] + 11 * clr_tbl[idx][1] + 2 * clr_tbl[idx][2]) / 64);
 	rawi = (int)((10 * clr_tbl[idx][0] - 4 * clr_tbl[idx][1] - 5 * clr_tbl[idx][2]) / 64);
 	rawq = (int)((3 * clr_tbl[idx][0] - 8 * clr_tbl[idx][1] + 5 * clr_tbl[idx][2]) / 64);
 
@@ -3145,4 +3159,29 @@ analogtv_color(int idx, int ntsc[4])
 		if (ntsc[i]>ANALOGTV_WHITE_LEVEL) ntsc[i] = ANALOGTV_WHITE_LEVEL;
 		if (ntsc[i]<ANALOGTV_BLACK_LEVEL) ntsc[i] = ANALOGTV_BLACK_LEVEL;
 	}
+  */
+
+  analogtv_rgb_to_ntsc(clr_tbl[idx][0], clr_tbl[idx][1], clr_tbl[idx][2], ntsc);
+}
+
+PROTO_DLL void
+analogtv_rgb_to_ntsc(byte rawr, byte rawg, byte rawb, int ntsc[4]){
+
+  int i;
+  int rawy, rawi, rawq;
+
+  /* RGB conversion taken from analogtv draw xpm */
+  rawy = (int)((5 * rawr + 11 * rawg + 2 * rawb) / 64);
+  rawi = (int)((10 * rawr - 4 * rawg - 5 * rawb) / 64);
+  rawq = (int)((3 * rawr - 8 * rawg + 5 * rawb) / 64);
+
+  ntsc[0] = rawy + rawq;
+  ntsc[1] = rawy - rawi;
+  ntsc[2] = rawy - rawq;
+  ntsc[3] = rawy + rawi;
+
+  for (i = 0; i<4; i++) {
+    if (ntsc[i]>ANALOGTV_WHITE_LEVEL) ntsc[i] = ANALOGTV_WHITE_LEVEL;
+    if (ntsc[i]<ANALOGTV_BLACK_LEVEL) ntsc[i] = ANALOGTV_BLACK_LEVEL;
+  }
 }
