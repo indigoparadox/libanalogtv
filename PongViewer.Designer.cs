@@ -29,12 +29,15 @@
             this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.trackBarNoiseLevel = new System.Windows.Forms.TrackBar();
+            this.label1 = new System.Windows.Forms.Label();
             this.menuStrip1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBarNoiseLevel)).BeginInit();
             this.SuspendLayout();
             // 
             // panel1
             // 
-            this.panel1.Location = new System.Drawing.Point(55, 36);
+            this.panel1.Location = new System.Drawing.Point(12, 27);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(640, 480);
             this.panel1.TabIndex = 0;
@@ -45,7 +48,7 @@
             this.fileToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(784, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(666, 24);
             this.menuStrip1.TabIndex = 1;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -78,11 +81,30 @@
             this.exitToolStripMenuItem.Text = "E&xit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
+            // trackBarNoiseLevel
+            // 
+            this.trackBarNoiseLevel.Location = new System.Drawing.Point(12, 530);
+            this.trackBarNoiseLevel.Name = "trackBarNoiseLevel";
+            this.trackBarNoiseLevel.Size = new System.Drawing.Size(104, 45);
+            this.trackBarNoiseLevel.TabIndex = 2;
+            this.trackBarNoiseLevel.Scroll += new System.EventHandler(this.trackBarNoiseLevel_Scroll);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(13, 514);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(63, 13);
+            this.label1.TabIndex = 3;
+            this.label1.Text = "Noise Level";
+            // 
             // PongViewer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(784, 561);
+            this.ClientSize = new System.Drawing.Size(666, 573);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.trackBarNoiseLevel);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.menuStrip1);
             this.MainMenuStrip = this.menuStrip1;
@@ -92,6 +114,7 @@
             this.Resize += new System.EventHandler(this.PongViewer_Resize);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBarNoiseLevel)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -105,6 +128,8 @@
         private System.Windows.Forms.ToolStripMenuItem openToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
+        private System.Windows.Forms.TrackBar trackBarNoiseLevel;
+        private System.Windows.Forms.Label label1;
     }
 }
 

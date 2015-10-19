@@ -175,5 +175,9 @@ namespace AnalogTVTest {
                 this.SetPongImage( openDialog.FileName );
             }
         }
+
+        private void trackBarNoiseLevel_Scroll( object sender, EventArgs e ) {
+
+        }
     }
 }
