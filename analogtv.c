@@ -2916,10 +2916,6 @@ analogtv_draw_image(analogtv_input *input, unsigned int *data, int left, int top
       unsigned int rawg = (cword & ANALOGTV_IMAGE_MASK_G) >> ANALOGTV_IMAGE_OFFSET_G;
       unsigned int rawb = (cword & ANALOGTV_IMAGE_MASK_B) >> ANALOGTV_IMAGE_OFFSET_B;
 
-      if (0 != rawg && rawg != rawb){
-        printf("goo");
-      }
-
 #if 0
       rawy = (5 * rawr + 11 * rawg + 2 * rawb) / 64;
       rawi = (10 * rawr - 4 * rawg - 5 * rawb) / 64;
