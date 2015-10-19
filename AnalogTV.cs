@@ -433,6 +433,9 @@ namespace libAnalogTV.Interop {
         public static extern bool analogtv_load_bitmap( string path, out IntPtr data, out uint image_w, out uint image_h );
 
         [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
+        public static extern bool analogtv_free_imagefile( IntPtr data );
+
+        [DllImport( "libAnalogTV.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl )]
         public static extern int analogtv_handle_events( ANALOGTV_MARSHAL_TYPE_TV it );
     }
 }

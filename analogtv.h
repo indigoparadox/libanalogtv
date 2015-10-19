@@ -370,6 +370,9 @@ PROTO_DLL void analogtv_draw_xpm(analogtv *tv, analogtv_input *input,
 PROTO_DLL void analogtv_draw_image(analogtv_input *input, unsigned int *data,
   int left, int top, unsigned imagew, unsigned imageh);
 
+PROTO_DLL void
+analogtv_free_imagefile(unsigned *data);
+
 PROTO_DLL int analogtv_handle_events (analogtv *it);
 
 PROTO_DLL void

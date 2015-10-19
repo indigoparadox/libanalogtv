@@ -69,6 +69,11 @@ namespace AnalogTVTest {
         }
 
         public void SetPongImage( string pathIn ) {
+
+            if( IntPtr.Zero != this.pongBitmap ) {
+                AnalogTV.analogtv_free_imagefile( this.pongBitmap );
+            }
+
             this.pongX = 0;
             this.pongY = 0;
             uint widthIn = 0, heightIn = 0;
