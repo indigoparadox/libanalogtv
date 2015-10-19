@@ -468,10 +468,6 @@ analogtv_configure(analogtv *it)
   unsigned long long size = bitmap_get_window_size(it->window);
   int wlim = (int)BM_SIZE_WIDTH(size);
   int hlim = (int)BM_SIZE_HEIGHT(size);
-
-  /* SetDIBitsToDevice requires rows to be aligned on a DWORD (4 bytes). */
-  wlim /= 4;
-  wlim *= 4;
 #elif defined X11
   int hlim = it->xgwa.height;
   int wlim = it->xgwa.width;
@@ -482,29 +478,7 @@ analogtv_configure(analogtv *it)
   int surface_width = wlim;
   int surface_height = hlim;
 
-#if DEBUG
-  /* The scanlines get wonky and irregular if they are not multiples of 395 (790?) */
-  //assert(0 == (surface_height % 395));
-
-  /* We want to be roughly 4:3 ratio or the image will get wonky. */
-  /*
-  int width_ratio_ideal = surface_height * 4 / 3;
-  int width_limit_high = width_ratio_ideal + 20;
-  int width_limit_low = width_ratio_ideal - 20;
-  */
-  //assert(surface_width > width_limit_low);
-  //assert(surface_width < width_limit_high);
-#endif
-
-  hlim /= ANALOGTV_VISLINES;
-  hlim *= ANALOGTV_VISLINES;
-
-  //hlim /= 4;
-  //hlim *= 4;
-
   ratio = wlim / (float)hlim;
-
-  /* TODO: Move our constant checks from image_alloc() to here? */
 
 #ifdef USE_IPHONE
   /* Fill the whole iPhone screen, even though that distorts the image. */
@@ -559,6 +533,31 @@ analogtv_configure(analogtv *it)
       hlim -= height_diff;
     }
 
+  /* SetDIBitsToDevice requires rows to be aligned on a DWORD (4 bytes). */
+  wlim /= 4;
+  wlim *= 4;
+
+#if DEBUG
+  /* The scanlines get wonky and irregular if they are not multiples of 395 (790?) */
+  //assert(0 == (surface_height % 395));
+
+  /* We want to be roughly 4:3 ratio or the image will get wonky. */
+  /*
+  int width_ratio_ideal = surface_height * 4 / 3;
+  int width_limit_high = width_ratio_ideal + 20;
+  int width_limit_low = width_ratio_ideal - 20;
+  */
+  //assert(surface_width > width_limit_low);
+  //assert(surface_width < width_limit_high);
+#endif
+
+  hlim /= ANALOGTV_VISLINES;
+  hlim *= ANALOGTV_VISLINES;
+
+  //hlim /= 4;
+  //hlim *= 4;
+
+  /* TODO: Move our constant checks from image_alloc() to here? */
 
   /* Most times this doesn't change */
   if (wlim != oldwidth || hlim != oldheight) {
@@ -1654,7 +1653,7 @@ analogtv_blast_imagerow(const analogtv *it,
 	  unsigned line = y - ytop;
 	  float levelmult = (float)(it->leveltable[lineheight][line].value);
 	  for (x = 0, rpf = rgbf; rpf != rgbf_end; x++, rpf += 3) {
-          /* Grab the color for this "pixel" from levels. */
+      /* Grab the color for this "pixel" from levels. */
 		  int ntscri = (int)(rpf[0] * levelmult);
 		  int ntscgi = (int)(rpf[1] * levelmult);
 		  int ntscbi = (int)(rpf[2] * levelmult);
@@ -1662,16 +1661,16 @@ analogtv_blast_imagerow(const analogtv *it,
 		  if (ntscgi >= ANALOGTV_CV_MAX) ntscgi = ANALOGTV_CV_MAX - 1;
 		  if (ntscbi >= ANALOGTV_CV_MAX) ntscbi = ANALOGTV_CV_MAX - 1;
           
-          /* The "pixel" may be multiple real pixels wide, up to xrepl. */
-          for (j = 0; j < xrepl; j += 1) {
-            j_pix = j * BM_PIXEL_WIDTH;
-            bitmap_blast_data[i + j_pix] = (it->blue_values[ntscbi] >> it->blue_shift);
-            bitmap_blast_data[i + j_pix + 1] = (it->green_values[ntscgi] >> it->green_shift);
-            bitmap_blast_data[i + j_pix + 2] = it->red_values[ntscri];
-		  }
+      /* The "pixel" may be multiple real pixels wide, up to xrepl. */
+      for (j = 0; j < xrepl; j += 1) {
+        j_pix = j * BM_PIXEL_WIDTH;
+        bitmap_blast_data[i + j_pix] = (it->blue_values[ntscbi] >> it->blue_shift);
+        bitmap_blast_data[i + j_pix + 1] = (it->green_values[ntscgi] >> it->green_shift);
+        bitmap_blast_data[i + j_pix + 2] = it->red_values[ntscri];
+      }
 
-          /* Move on to the next "pixel". */
-          i += (xrepl * BM_PIXEL_WIDTH);
+      /* Move on to the next "pixel". */
+      i += (xrepl * BM_PIXEL_WIDTH);
 	  }
   }
 
