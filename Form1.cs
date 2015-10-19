@@ -14,23 +14,25 @@ using System.Diagnostics;
 namespace AnalogTVTest {
     public partial class Form1 : Form {
 
-        private static readonly int PONG_WIDTH = 10;
-        private static readonly int PONG_HEIGHT = 10;
-        private static readonly int PONG_MAX_X = 240;
-        private static readonly int PONG_MAX_Y = 160;
+        private static readonly int PONG_WIDTH = 30;
+        private static readonly int PONG_HEIGHT = 30;
+        private static readonly int PONG_MAX_X = AnalogTV.ANALOGTV_VIS_LEN - PONG_WIDTH;
+        private static readonly int PONG_MAX_Y = AnalogTV.ANALOGTV_VISLINES - PONG_HEIGHT;
 
         //private Graphics g;
-        private AnalogTV.analogtv tvPtr;
+        //private AnalogTV.analogtv tvPtr;
+        private IntPtr tvPtr;
         //private AnalogTV.analogtv_reception rec;
-        private AnalogTV.analogtv_reception recPtr;
+        private IntPtr recPtr;
         private int[][] pixels;
         private int[] ntsc;
-        private AnalogTV.analogtv_input inputPtr;
+        //private AnalogTV.analogtv_input inputPtr;
+        private IntPtr inputPtr;
 
         private int pongX = 0;
         private int pongY = 0;
-        private int pongXInc = 30;
-        private int pongYInc = 30;
+        private int pongXInc = 10;
+        private int pongYInc = 10;
 
         public Form1() {
             InitializeComponent();
@@ -39,14 +41,14 @@ namespace AnalogTVTest {
         private void DrawPong(int x, int y) {
             int[] field_ntsc = new int[4] { 0, 0, 0, 0 };
 
-            AnalogTV.analogtv_lcp_to_ntsc( AnalogTV.ANALOGTV_BLACK_LEVEL, 0.0, 0.0, field_ntsc );
+            AnalogTV.analogtv_lcp_to_ntsc( AnalogTV.ANALOGTV_WHITE_LEVEL, 0.0, 0.0, field_ntsc );
 
             AnalogTV.analogtv_draw_solid( this.inputPtr,
                 AnalogTV.ANALOGTV_VIS_START, AnalogTV.ANALOGTV_VIS_END,
                 AnalogTV.ANALOGTV_TOP, AnalogTV.ANALOGTV_BOT,
                 field_ntsc );
 
-            AnalogTV.analogtv_color( 1, field_ntsc );
+            AnalogTV.analogtv_color( 5, field_ntsc );
 
             //AnalogTV.analogtv_draw_solid( this.inputPtr,
             AnalogTV.analogtv_draw_solid( this.inputPtr,
@@ -58,14 +60,22 @@ namespace AnalogTVTest {
         }
 
         private void Form1_Load( object sender, EventArgs e ) {
+
+            //this.Width = 640;
+            //this.Height = 480;
+
             this.ntsc = new int[4] { 0, 0, 0, 0 };
+            /*
             this.pixels = new int[this.Width][];
             for( int i = 0 ; this.Height > i ; i++ ) {
                 this.pixels[i] = new int[this.Height];
             }
-            
-            this.tvPtr = (AnalogTV.analogtv)Marshal.PtrToStructure( AnalogTV.analogtv_allocate(this.Handle),typeof(AnalogTV.analogtv) );
-            this.inputPtr = (AnalogTV.analogtv_input)Marshal.PtrToStructure( AnalogTV.analogtv_input_allocate(),typeof(AnalogTV.analogtv_input) );
+            */
+
+            //this.tvPtr = (AnalogTV.analogtv)Marshal.PtrToStructure( AnalogTV.analogtv_allocate(this.Handle),typeof(AnalogTV.analogtv) );
+            //this.inputPtr = (AnalogTV.analogtv_input)Marshal.PtrToStructure( AnalogTV.analogtv_input_allocate(),typeof(AnalogTV.analogtv_input) );
+            this.tvPtr = AnalogTV.analogtv_allocate( panel1.Handle );
+            this.inputPtr = AnalogTV.analogtv_input_allocate();
             //AnalogTV.analogtv_set_defaults( this.tvPtr );
             AnalogTV.analogtv_setup_sync( inputPtr, 1, 0 );
             
@@ -96,7 +106,7 @@ namespace AnalogTVTest {
             TPaint.Start();
 
             Timer TPong = new Timer();
-            TPong.Interval = 100;
+            TPong.Interval = 50;
             TPong.Tick += this.TPong_Tick;
             TPong.Enabled = true;
             TPong.Start();
@@ -109,10 +119,10 @@ namespace AnalogTVTest {
         }
 
         private void TPong_Tick( Object sender, EventArgs e ) {
-            if( PONG_MAX_X <= this.pongX || 0 >= this.pongX ) {
+            if( PONG_MAX_X <= this.pongX || 0 > this.pongX ) {
                 this.pongXInc *= -1;
             }
-            if( PONG_MAX_Y <= this.pongY || 0 >= this.pongY ) {
+            if( PONG_MAX_Y <= this.pongY || 0 > this.pongY ) {
                 this.pongYInc *= -1;
             }
 
@@ -124,7 +134,9 @@ namespace AnalogTVTest {
 
         private void Form1_Resize( object sender, EventArgs e ) {
             this.Width = (this.Width / 12) * 12;
-            AnalogTV.analogtv_reconfigure( this.tvPtr );
+            if( IntPtr.Zero != this.tvPtr ) {
+                AnalogTV.analogtv_reconfigure( this.tvPtr );
+            }
         }
     }
 }
