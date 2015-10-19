@@ -7,9 +7,15 @@ using System.Threading.Tasks;
 
 namespace libAnalogTV.Interop {
 
+#if false
     using ANALOGTV_MARSHAL_TYPE_INPUT = AnalogTV.analogtv_input;
     using ANALOGTV_MARSHAL_TYPE_RECEPTION = AnalogTV.analogtv_reception;
     using ANALOGTV_MARSHAL_TYPE_TV = AnalogTV.analogtv;
+#else
+    using ANALOGTV_MARSHAL_TYPE_INPUT = IntPtr;
+    using ANALOGTV_MARSHAL_TYPE_RECEPTION = IntPtr;
+    using ANALOGTV_MARSHAL_TYPE_TV = IntPtr;
+#endif
 
     public class AnalogTV {
 
